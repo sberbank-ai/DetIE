@@ -1,0 +1,4 @@
+benchmark:
+  name: carb
+  raw_path: modules/model/evaluation/carb-original/data/gold/test.tsv
+  processed_path: modules/model/evaluation/carb-original/data/gold/ours.tsv

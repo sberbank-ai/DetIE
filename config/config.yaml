@@ -1,0 +1,78 @@
+defaults:
+  - model: detie-cut
+  - opt: adam
+  - benchmark: carb
+
+model:
+  seed: 100
+  profile: False
+  gpus: 1
+  log_every_n_steps: 100
+
+  validate_on_test: False # If true splits the data into train/val upon running training script
+  val_fraction: 0.1
+
+  n_test_batches: 100
+  test_results_file: results/model_test.json
+
+  tokenizer: ${model.pretrained_encoder}
+
+  best_ckpt: best.ckpt
+  best_hparams_path: results/logs/default/version_${model.best_version}/hparams.yaml
+  best_ckpt_path: results/logs/default/version_${model.best_version}/checkpoints/${model.best_ckpt}
+  cache_dir: results/cache
+
+  viz_sentences: [
+    "This is how Agent Archer received a medal from the US.",
+    "The assault rifle is one of the very popular weapons in the Sahara desert.",
+    "Bill Gates owns Microsoft Corporation.",
+    "Fallout 4 is a post-apocalyptic role-playing game developed by Bethesda Game Studios[2] and published by Bethesda Softworks.",
+    "A new equipment system allows a wide variety of upgrades and customization for weapons and armor.",
+    "Each sample will be retrieved by indexing tensors along the first dimension.",
+    "Skills have been removed, replaced with a 7x10 perk chart. At each level-up, the player can acquire a new perk, each with prerequisites based on SPECIAL attributes and level, and most have multiple tiers.",
+    "The Wells and Wellington affair was a dispute involving the Australian Journal of Herpetology, a scientific journal on the study of amphibians and reptiles published beginning in 1981 by the Australian Herpetologists' League. Richard Wells, a student, served as the editor-in-chief of the peer-reviewed periodical, with an editorial board of three researchers.",
+  ]
+
+scheduler:
+  name: ExponentialLR
+  gamma: 1
+
+wikidata:
+  data_dir: ./data/wikidata
+  seed: 42
+
+  lang: en
+
+  multiple_spans: True # Whether the datasets below were given in multiple spans format
+  lsoie_train_path: ${wikidata.data_dir}/imojie_train_patterns.json
+  lsoie_test_path: ${wikidata.data_dir}/lsoie_test10.json
+
+  crawling:
+    n_threads: 10
+
+    sparql_limit: 100
+    min_property_id: 1
+    max_property_id: 10000
+
+    triplets_dir: ${wikidata.data_dir}/triplets_${wikidata.lang}
+
+  preprocessing:
+    refilter: False
+#    triplets_filtered_dir: ${wikidata.data_dir}/triplets_filtered_${wikidata.lang}
+    triplets_filtered_dir: ${wikidata.data_dir}/triplets_${wikidata.lang}
+
+
+  generation:
+    n_texts: 10000
+
+    lm_stride: 4
+    lm_threshold: 200
+
+    sentences_path: ${wikidata.data_dir}/sentences_${wikidata.lang}.json
+#    sentences_path: ${wikidata.data_dir}/sentences_es_pt.json
+#    sentences_path: data/4languages_data/train.json
+
+hydra:
+  run:
+    # Output directory for normal runs
+    dir: .

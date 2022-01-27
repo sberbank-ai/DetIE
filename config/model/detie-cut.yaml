@@ -1,0 +1,33 @@
+# @package _global_
+model:
+  name: TripletsExtractorBERTOnly # the model variant used in the paper
+  lang: en
+  use_syntax_features: False # using extra syntax-based features (not used in the paper)
+  postprocess_adp: False # extra work with adpositions (not used in the paper)
+  join_is: True # appending [is] [of] [from] to the text (OpenIE6-inspired language-dependent trick used for English)
+
+  pretrained_encoder: bert-base-multilingual-cased # tried: xlm-roberta-large, bert-base-uncased, bert-large-cased
+  word_dropout: 0
+
+  stanza_emb_size: 32 # syntax features embeddings size (not used in the paper)
+
+  # Training process details
+  max_epochs: 100
+  batch_size: 32
+  unfreeze_epoch: 0
+  unfreeze_layers_from_top: 4
+  syntetic_data_after_epoch: ${model.max_epochs}
+
+  # Loss params
+  matching: iou # Intersection-over-Union or 'dice' or 'dice_squared'
+  disable_bg: True # (not) taking the background 'O' labels into account
+  focal_gamma: 0
+  class_weights: [1, 1, 1, 1]
+
+  # Transformer params
+  num_layers: 2
+  hid_size: 512
+  n_classes: 4 # S (source), R (relation),T (target), O (other) ~ arg1, rel, arg2, o
+  num_detections: 20 # a number of possible simultaneous 'detections' (sequences of labels) for each sentence
+
+  best_version: 276 # an ID of the model

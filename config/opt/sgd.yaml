@@ -1,0 +1,11 @@
+opt:
+  name: SGD
+  lr: 1e-4
+  weight_decay: 1e-6
+
+scheduler:
+  name: CyclicLR
+  base_lr: 1e-5
+  max_lr: 1e-3
+  step_size_up: 2000
+  mode: triangular2
