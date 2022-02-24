@@ -11,7 +11,9 @@ All the results have been obtained using V100 GPU with CUDA 10.1.
 
 ## Preparations
 
-Download the files bundle from [here]() (**TODO**). Each of them should be put into the corresponding directory:
+Download the files bundle from 
+[here](https://drive.google.com/drive/folders/1SGeQWcFwmL4BaMbCTxVw5-oU69vPW_d-?usp=sharing). Each of them 
+should be put into the corresponding directory:
 1. folder `version_243` (DetIE_LSOIE) should be copied to: `results/logs/default/version_243`;
 2. folder `version_263` (DetIE_IMoJIE) should be copied to: `results/logs/default/version_263`.
 
@@ -21,7 +23,7 @@ E. g. clone this repository, then
 ```bash
 cd DetIE/
 docker build -t detie .
-nvidia-docker run  -v ../DetIE:/project -p 8888:8888 -it detie:latest bash
+nvidia-docker run  -v ../DetIE:/project -p 8808:8808 -it detie:latest bash
 ```
 
 Once this docker image starts, we're ready for work.
@@ -65,6 +67,8 @@ Should be 708.6 sentences/sec. on NVIDIA Tesla V100 GPU.
 
 ## Evaluation
 
+### English sentences
+
 To apply the model to CaRB sentences, run 
 ```
 cd modules/model/evaluation/carb-openie6/
@@ -84,6 +88,10 @@ cd modules/model/evaluation/carb-openie6/
 * `detie243conj` is a codename for DetIE_{LSOIE} + IGL-CA
 * `detie263` is a codename for DetIE_{IMoJIE}
 * `detie263conj` is a codename for DetIE_{IMoJIE} + IGL-CA
+
+### Non-English data
+
+TODO
 
 ## Synthetic data
 
