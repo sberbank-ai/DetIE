@@ -15,7 +15,8 @@ Download the files bundle from
 [here](https://drive.google.com/drive/folders/1SGeQWcFwmL4BaMbCTxVw5-oU69vPW_d-?usp=sharing). Each of them 
 should be put into the corresponding directory:
 1. folder `version_243` (DetIE_LSOIE) should be copied to: `results/logs/default/version_243`;
-2. folder `version_263` (DetIE_IMoJIE) should be copied to: `results/logs/default/version_263`.
+2. folder `version_263` (DetIE_IMoJIE) should be copied to: `results/logs/default/version_263`;
+3. files `imojie_train_pattern.json`, `lsoie_test10.json` and `lsoie_train10.json` should be copied to `data/wikidata`.
 
 We suggest that you use the provided [Dockerfile](/Dockerfile) to deal with all the dependencies of this project.
 
@@ -60,8 +61,12 @@ PYTHONPATH=. python3 modules/model/train.py
 ## Inference time
 
 ```
-PYTHONPATH=. python3 modules/model/test.py
+PYTHONPATH=. python3 modules/model/test.py model.best_version=243
 ```
+
+This yields time in seconds when running inference against 
+`modules/model/evaluation/oie-benchmark-stanovsky/raw_sentences/all.txt`
+using batch size equal to 32.
 
 Should be 708.6 sentences/sec. on NVIDIA Tesla V100 GPU.
 
