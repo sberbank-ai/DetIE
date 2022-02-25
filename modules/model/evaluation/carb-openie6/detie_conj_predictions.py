@@ -4,7 +4,7 @@ from collections import defaultdict
 import hydra
 from detie_predict import prepare_detie_ollie_format
 
-from config.hydra import cleanup_hydra
+from config.hydra_ext import cleanup_hydra
 from modules.model import models
 
 
