@@ -32,10 +32,11 @@ def get_conj_map(fp="systems_output/carb_test.txt.conj"):
     return sentences, ext2sentence
 
 
-# @cleanup_hydra
+@cleanup_hydra
 @hydra.main('../../../../config', 'config.yaml')
 def main(cfg):
-    VERSION = 273
+
+    VERSION = 243
     cfg.model.best_version = VERSION
     cfg.model.best_ckpt_path = "../../../../" + cfg.model.best_ckpt_path
     cfg.model.best_hparams_path = "../../../../" + cfg.model.best_hparams_path
