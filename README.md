@@ -81,7 +81,8 @@ PYTHONPATH=<repo root> python3 detie_predict.py
 head -5 systems_output/detie243_output.txt
 ```
 
-This will save the predictions into the `modules/model/evaluation/carb-openie6/systems_output/` directory.
+This will save the predictions into the `modules/model/evaluation/carb-openie6/systems_output/` directory. The same
+should be done with `modules/model/evaluation/carb-openie6/detie_conj_predictions.py`.
 
 To reproduce the DetIE numbers from the Table 3 in the paper, run
 
