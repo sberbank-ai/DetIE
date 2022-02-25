@@ -6,6 +6,7 @@ import pandas as pd
 from tqdm import tqdm
 from omegaconf import DictConfig
 
+from config.hydra_ext import cleanup_hydra
 from modules.model import models
 
 VERSION = None # global variables are evil; todo
@@ -78,12 +79,12 @@ def prepare_detie_ollie_format(sentences_raw_file_path, save_file_path, cfg, sav
     return result_dataframe
 
 
-# @cleanup_hydra
+@cleanup_hydra
 @hydra.main('../../../../config', 'config.yaml')
 def main(cfg):
 
     assert VERSION is not None
-
+    
     cfg.model.best_version = VERSION
     cfg.model.best_ckpt_path = "../../../../" + cfg.model.best_ckpt_path
     cfg.model.best_hparams_path = "../../../../" + cfg.model.best_hparams_path
@@ -110,10 +111,7 @@ def main(cfg):
 
 if __name__ == '__main__':
 
-    from argparse import ArgumentParser
-
-    parser = ArgumentParser()
-    parser.add_argument("--version", default=273, type=int)
-    args = parser.parse_args()
-    VERSION = args.version
+    logging.basicConfig(level=logging.DEBUG)
+    VERSION = 243
     main()
+
