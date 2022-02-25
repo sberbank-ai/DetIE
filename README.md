@@ -78,6 +78,7 @@ To apply the model to CaRB sentences, run
 ```
 cd modules/model/evaluation/carb-openie6/
 PYTHONPATH=<repo root> python3 detie_predict.py
+head -5 systems_output/detie243_output.txt
 ```
 
 This will save the predictions into the `modules/model/evaluation/carb-openie6/systems_output/` directory.
@@ -94,9 +95,6 @@ cd modules/model/evaluation/carb-openie6/
 * `detie263` is a codename for DetIE_{IMoJIE}
 * `detie263conj` is a codename for DetIE_{IMoJIE} + IGL-CA
 
-### Non-English data
-
-TODO
 
 ## Synthetic data
 
