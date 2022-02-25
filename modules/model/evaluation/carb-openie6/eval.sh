@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 set -e
 
-#python3 -c 'import nltk; nltk.download("stopwords")'
-#python3 -m pip install docopt
+python3 -c 'import nltk; nltk.download("stopwords")'
+python3 -m pip install docopt
 
 for dataset in "test"; do
 
