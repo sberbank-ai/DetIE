@@ -33,7 +33,7 @@ def get_conj_map(fp="systems_output/carb_test.txt.conj"):
 
 
 @cleanup_hydra
-@hydra.main('../../../../config', 'config.yaml')
+@hydra.main("../../../../config", "config.yaml")
 def main(cfg):
 
     VERSION = 243
@@ -77,8 +77,8 @@ def main(cfg):
                 # print(reduced2sentece[line])
                 # print(sentence2reduced[line])
                 if extractions.shape[0] > 0:
-                    extractions.to_csv(save_path, mode='a', header=False, index=None, sep="\t")
+                    extractions.to_csv(save_path, mode="a", header=False, index=None, sep="\t")
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

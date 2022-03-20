@@ -6,15 +6,17 @@ This is used in order to split a large file into train, dev and test.
 
 READER - points out which oie reader to use (see dictionary for possible entries)
 """
+import logging
+
 from clausieReader import ClausieReader
+from docopt import docopt
 from ollieReader import OllieReader
 from openieFourReader import OpenieFourReader
 from propsReader import PropSReader
 from reVerbReader import ReVerbReader
 from stanfordReader import StanfordReader
-from docopt import docopt
-import logging
-logging.basicConfig(level = logging.INFO)
+
+logging.basicConfig(level=logging.INFO)
 
 available_readers = {
     "clausie": ClausieReader,
@@ -22,7 +24,7 @@ available_readers = {
     "openie4": OpenieFourReader,
     "props": PropSReader,
     "reverb": ReVerbReader,
-    "stanford": StanfordReader
+    "stanford": StanfordReader,
 }
 
 
@@ -33,5 +35,4 @@ if __name__ == "__main__":
     corpus = args["--corpus"]
     reader = available_readers[args["--reader"]]()
     reader.read(inp)
-    reader.split_to_corpus(corpus,
-                           out)
+    reader.split_to_corpus(corpus, out)

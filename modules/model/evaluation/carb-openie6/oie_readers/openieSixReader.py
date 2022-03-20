@@ -5,9 +5,8 @@ from oie_readers.oieReader import OieReader
 
 
 class OpenieSixReader(OieReader):
-
     def __init__(self):
-        self.name = 'OpenIE-6'
+        self.name = "OpenIE-6"
 
     def read(self, fn: str, includeNominal: bool = False):
 
@@ -36,9 +35,9 @@ class OpenieSixReader(OieReader):
                     inside = False
 
                     for arg1, rel, arg2, conf in current_data["triples"]:
-                        curExtraction = Extraction(pred=rel, head_pred_index=-1,
-                                                   sent=current_data["sentence"],
-                                                   confidence=float(conf))
+                        curExtraction = Extraction(
+                            pred=rel, head_pred_index=-1, sent=current_data["sentence"], confidence=float(conf)
+                        )
                         curExtraction.addArg(arg1)
                         curExtraction.addArg(arg2)
                         d[current_data["sentence"]] = d.get(current_data["sentence"], []) + [curExtraction]
@@ -50,7 +49,7 @@ if __name__ == "__main__":
     reader = OpenieSixReader()
     reader.read("./system_outputs/test/openie6_output.txt")
 
-    for k,v in reader.oie.items():
+    for k, v in reader.oie.items():
         print(k)
         for vv in v:
             print(vv.pred, ">", vv.args)

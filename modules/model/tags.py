@@ -2,8 +2,7 @@
 
 from collections import defaultdict
 
-UD_DEPREL_RAW = \
-    """
+UD_DEPREL_RAW = """
         acl: clausal modifier of noun (adnominal clause)
         acl:relcl: relative clause modifier
         advcl: adverbial clause modifier

@@ -2,20 +2,20 @@
 
 import random
 from collections import defaultdict
-from typing import List, Callable, Dict
+from typing import Callable, Dict, List
 
 import stanza
 from nltk.tokenize.treebank import TreebankWordDetokenizer
 from stanza import Pipeline
 from tqdm import tqdm
 
+from ..model.apply import split_adp_right
 from .templates import TemplateCreator
 from .wikidata import SemanticTriplet, load_triplets
-from ..model.apply import split_adp_right
 
 
 class TripletGenerator:
-    def __init__(self, triplets_dir: str, lang: str = 'en', preprocess_triplet: bool = False):
+    def __init__(self, triplets_dir: str, lang: str = "en", preprocess_triplet: bool = False):
 
         self.triplets: List[SemanticTriplet] = load_triplets(triplets_dir)
         self.lang = lang
@@ -24,7 +24,7 @@ class TripletGenerator:
 
         if self.preprocess_triplet:
             stanza.download(self.lang)
-            self.pipeline = Pipeline(self.lang, processors='tokenize,mwt,pos')
+            self.pipeline = Pipeline(self.lang, processors="tokenize,mwt,pos")
 
     def sample_triplets(self, callbacks: List[Callable] = tuple()) -> List[List[str]]:
 
@@ -50,7 +50,7 @@ class TripletGenerator:
 
         for _ in tqdm(range(n_iter)):
             template, relations, indices = tc.fill_one(self.sample_triplets(callbacks))
-            out_dict['texts'].append(template)
-            out_dict['relations'].append(relations)
-            out_dict['indices'].append(indices)
+            out_dict["texts"].append(template)
+            out_dict["relations"].append(relations)
+            out_dict["indices"].append(indices)
         return out_dict

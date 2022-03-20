@@ -12,7 +12,7 @@ class DefaultCallback:
         for item in triplet:
             if not item:
                 return False
-            if 'category:' in item.lower():
+            if "category:" in item.lower():
                 return False
 
         return True
@@ -26,19 +26,19 @@ class LMScoreCallback:
         self.threshold = threshold
 
     def __call__(self, triplet: List[str]):
-        score = self.scorer.eval(' '.join(triplet))
+        score = self.scorer.eval(" ".join(triplet))
         if score > self.threshold:
             return False
         self.scores.append(score)
-        print(' '.join(triplet))
+        print(" ".join(triplet))
         return True
 
 
 class StanzaCallback:
-    def __init__(self, lang: str = 'en'):
+    def __init__(self, lang: str = "en"):
         self.lang = lang
         stanza.download(lang)
-        self.tagger = stanza.Pipeline(lang=lang, processors='tokenize,mwt,pos')
+        self.tagger = stanza.Pipeline(lang=lang, processors="tokenize,mwt,pos")
         # if lang == 'en':
         #     self.tagger = stanza.Pipeline(lang=lang, processors='tokenize,mwt,pos')
         # elif lang == 'ru':
@@ -47,8 +47,8 @@ class StanzaCallback:
         #     raise ValueError("Unknown lang: " + lang)
 
     def __call__(self, triplet: List[str]):
-        if self.lang == 'ru':
+        if self.lang == "ru":
             # TODO: remove this dirty hack
             return True
         doc = self.tagger(triplet[1])
-        return 'VBZ' in (word.xpos for sentence in doc.sentences for word in sentence.words)
+        return "VBZ" in (word.xpos for sentence in doc.sentences for word in sentence.words)

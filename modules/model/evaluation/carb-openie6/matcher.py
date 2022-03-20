@@ -20,8 +20,8 @@ class Matcher:
             s1 = s1.lower()
             s2 = s2.lower()
 
-        s1Words = s1.split(' ')
-        s2Words = s2.split(' ')
+        s1Words = s1.split(" ")
+        s2Words = s2.split(" ")
 
         if ignoreStopwords:
             s1Words = Matcher.removeStopwords(s1Words)
@@ -40,8 +40,8 @@ class Matcher:
             s1 = s1.lower()
             s2 = s2.lower()
 
-        s1Words = s1.split(' ')
-        s2Words = s2.split(' ')
+        s1Words = s1.split(" ")
+        s2Words = s2.split(" ")
 
         if ignoreStopwords:
             s1Words = Matcher.removeStopwords(s1Words)
@@ -54,8 +54,8 @@ class Matcher:
         """
         Return whehter gold and predicted extractions agree on the arguments
         """
-        sRef = ' '.join([ref.elementToStr(elem) for elem in ref.args])
-        sEx = ' '.join([ex.elementToStr(elem) for elem in ex.args])
+        sRef = " ".join([ref.elementToStr(elem) for elem in ref.args])
+        sEx = " ".join([ex.elementToStr(elem) for elem in ex.args])
 
         count = 0
 
@@ -77,8 +77,8 @@ class Matcher:
         ref_ext = "(subject) " + ref_arg1 + " (relation) " + ref_pred + " (object) " + ref_arg2
         ex_arg1, ex_pred, ex_arg2 = ex.args[0].strip(), ex.pred.strip(), " ".join(ex.args[1:]).strip()
         ex_ext = "(subject) " + ex_arg1 + " (relation) " + ex_pred + " (object) " + ex_arg2
-        prec_bleu = sentence_bleu(references=[ref_ext.split(' ')], hypothesis=ex_ext.split(' '))
-        recall_bleu = sentence_bleu(references=[ex_ext.split(' ')], hypothesis=ref_ext.split(' '))
+        prec_bleu = sentence_bleu(references=[ref_ext.split(" ")], hypothesis=ex_ext.split(" "))
+        recall_bleu = sentence_bleu(references=[ex_ext.split(" ")], hypothesis=ref_ext.split(" "))
         return prec_bleu, recall_bleu
 
         # sRef = ref.bow()
@@ -88,8 +88,8 @@ class Matcher:
 
     @staticmethod
     def lexicalMatch(ref, ex, ignoreStopwords, ignoreCase):
-        sRef = ref.bow().split(' ')
-        sEx = ex.bow().split(' ')
+        sRef = ref.bow().split(" ")
+        sEx = ex.bow().split(" ")
         count = 0
         # for w1 in sRef:
         #    if w1 in sEx:
@@ -235,11 +235,11 @@ class Matcher:
             # to all systems that correctly extracted the reformulated word.
             recall[0] += matching_words
 
-        if (precision[1] == 0):
+        if precision[1] == 0:
             prec = 0
         else:
             prec = 1.0 * precision[0] / precision[1]
-        if (recall[1] == 0):
+        if recall[1] == 0:
             rec = 0
         else:
             rec = 1.0 * recall[0] / recall[1]
@@ -247,8 +247,8 @@ class Matcher:
 
     @staticmethod
     def simple_tuple_match(ref, ex, ignoreStopwords, ignoreCase):
-        ref.args = [ref.args[0], ' '.join(ref.args[1:])]
-        ex.args = [ex.args[0], ' '.join(ex.args[1:])]
+        ref.args = [ref.args[0], " ".join(ref.args[1:])]
+        ex.args = [ex.args[0], " ".join(ex.args[1:])]
 
         precision = [0, 0]  # 0 out of 0 predicted words match
         recall = [0, 0]  # 0 out of 0 reference words match
@@ -312,12 +312,12 @@ class Matcher:
     def binary_linient_tuple_match(ref, ex, ignoreStopwords, ignoreCase):
         if len(ref.args) >= 2:
             r = copy(ref)
-            r.args = [ref.args[0], ' '.join(ref.args[1:])]
+            r.args = [ref.args[0], " ".join(ref.args[1:])]
         else:
             r = ref
         if len(ex.args) >= 2:
             e = copy(ex)
-            e.args = [ex.args[0], ' '.join(ex.args[1:])]
+            e.args = [ex.args[0], " ".join(ex.args[1:])]
         else:
             e = ex
         stright_match = Matcher.linient_tuple_match(r, e, ignoreStopwords, ignoreCase)
@@ -333,7 +333,7 @@ class Matcher:
         else:
             if len(ex.args) >= 2:
                 e = copy(ex)
-                e.args = [' '.join(ex.args[1:]), ex.args[0]]
+                e.args = [" ".join(ex.args[1:]), ex.args[0]]
             else:
                 e = ex
             reverse_match = Matcher.linient_tuple_match(r, e, ignoreStopwords, ignoreCase)
@@ -345,13 +345,13 @@ class Matcher:
         if len(ref.args) >= 2:
             # r = ref.copy()
             r = copy(ref)
-            r.args = [ref.args[0], ' '.join(ref.args[1:])]
+            r.args = [ref.args[0], " ".join(ref.args[1:])]
         else:
             r = ref
         if len(ex.args) >= 2:
             # e = ex.copy()
             e = copy(ex)
-            e.args = [ex.args[0], ' '.join(ex.args[1:])]
+            e.args = [ex.args[0], " ".join(ex.args[1:])]
         else:
             e = ex
         return Matcher.tuple_match(r, e, ignoreStopwords, ignoreCase)
@@ -363,4 +363,4 @@ class Matcher:
     # CONSTANTS
     BLEU_THRESHOLD = 0.4
     LEXICAL_THRESHOLD = 0.5  # Note: changing this value didn't change the ordering of the tested systems
-    stopwords = stopwords.words('english') + list(string.punctuation)
+    stopwords = stopwords.words("english") + list(string.punctuation)

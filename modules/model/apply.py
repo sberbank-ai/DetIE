@@ -1,12 +1,12 @@
 # coding: utf-8
+import string
+from itertools import chain
+from typing import List
+
 import numpy as np
 import torch
-import string
 
 from .dataloaders import WikiDataset
-from typing import List
-from itertools import chain
-
 
 ADP_ALIASES = {"ADP", "SCONJ"}
 
@@ -14,7 +14,7 @@ ADP_ALIASES = {"ADP", "SCONJ"}
 def split_adp_left(doc, detokenizer):
 
     if not doc.sentences:
-        return '', ''
+        return "", ""
 
     words, i = doc.sentences[0].words, 0
 
@@ -24,14 +24,14 @@ def split_adp_left(doc, detokenizer):
 
     return (
         detokenizer.detokenize(map(lambda x: x.text, words[:i])),
-        detokenizer.detokenize(chain(map(lambda x: x.text, words[i:]), map(lambda x: x.text, doc.sentences[1:])))
+        detokenizer.detokenize(chain(map(lambda x: x.text, words[i:]), map(lambda x: x.text, doc.sentences[1:]))),
     )
 
 
 def split_adp_right(doc, detokenizer, drop_aux=False):
 
     if not doc.sentences:
-        return '', ''
+        return "", ""
 
     words = doc.sentences[-1].words
 
@@ -47,14 +47,14 @@ def split_adp_right(doc, detokenizer, drop_aux=False):
     #             break
 
     return (
-        detokenizer.detokenize(chain(map(lambda x: x.text, doc.sentences[:-1]), map(lambda x: x.text, words[:i + 1]))),
-        detokenizer.detokenize(map(lambda x: x.text, words[i + 1:])),
+        detokenizer.detokenize(chain(map(lambda x: x.text, doc.sentences[:-1]), map(lambda x: x.text, words[: i + 1]))),
+        detokenizer.detokenize(map(lambda x: x.text, words[i + 1 :])),
     )
 
 
 def is_aux(doc):
     for word in chain.from_iterable(map(lambda x: x.words, doc.sentences)):
-        if word.upos in ['AUX']:
+        if word.upos in ["AUX"]:
             return True
     return False
 
@@ -74,7 +74,7 @@ def postprocess_adp(triplets_for_texts: List[List[List]], pipeline, detokenizer)
 
 
 def get_best_labels_greedy(selection):
-    """ Just taking argmax among 4 possible label scores """
+    """Just taking argmax among 4 possible label scores"""
     selection = selection.cpu().numpy()
     argmax_selection = np.argmax(selection, axis=1)
     return argmax_selection
@@ -82,13 +82,15 @@ def get_best_labels_greedy(selection):
 
 def selection_of_triples_with_argmax(y_hat: torch.tensor):
     """
-        :param y_hat: prediction
+    :param y_hat: prediction
     """
     # selecting argmax label
     amax = torch.argmax(y_hat, dim=-1)  # [batch, seq_len, num_detections]
 
     # checking if equals any of the SRT labels (note: broadcasting; [2] -> [False True False])
-    checking = amax.unsqueeze(-1) == torch.tensor([1, 2, 3], device=amax.device)  # boolean [batch, seq_len, num_detections, 3]
+    checking = amax.unsqueeze(-1) == torch.tensor(
+        [1, 2, 3], device=amax.device
+    )  # boolean [batch, seq_len, num_detections, 3]
 
     # aggregation along sequences
     any_has_true = torch.any(checking, dim=-3)  # [batch, num_detections, 3]
@@ -113,12 +115,14 @@ def selection_of_triples(y_hat, threshold: float = 0.1, strict_all_three=True):
     mask = y_hat > threshold
 
     # sequences have at least THRESHOLD probability
-    mask_all_sequences_are_meaningful = torch.any(mask[:, :, :, WikiDataset.NO + 1:], dim=-3)
+    mask_all_sequences_are_meaningful = torch.any(mask[:, :, :, WikiDataset.NO + 1 :], dim=-3)
 
     # detections that have at least one significant occurrence in a seq of each of the three: S, R, T
-    mask_all_three_parts_are_there = \
-        torch.all(mask_all_sequences_are_meaningful, dim=-1) if strict_all_three \
-            else torch.any(mask_all_sequences_are_meaningful, dim=-1)
+    mask_all_three_parts_are_there = (
+        torch.all(mask_all_sequences_are_meaningful, dim=-1)
+        if strict_all_three
+        else torch.any(mask_all_sequences_are_meaningful, dim=-1)
+    )
 
     # a list of such detections per item_id (number of data point in the batch)
     nonzeros_item_ids, nonzeros_rel_ids = mask_all_three_parts_are_there.nonzero(as_tuple=True)
@@ -127,7 +131,7 @@ def selection_of_triples(y_hat, threshold: float = 0.1, strict_all_three=True):
 
 
 def strip_bs(text: str) -> str:
-    """ Removing punctuation and whitespace from bowth sides of the text """
+    """Removing punctuation and whitespace from bowth sides of the text"""
     return text.strip(string.punctuation).strip()
 
 
@@ -155,7 +159,7 @@ def spans2triples(labels, text, offsets_mapping_item, tokens):
 
         prev_label = label
 
-    return [strip_bs(text[sp[0]:sp[1]]) if sp is not None else "" for sp in result[1:]]
+    return [strip_bs(text[sp[0] : sp[1]]) if sp is not None else "" for sp in result[1:]]
 
 
 def prediction2triples(prediction, texts, offsets_mapping, tokenized):

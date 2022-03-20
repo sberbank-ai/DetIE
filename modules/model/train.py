@@ -1,21 +1,20 @@
 # coding: utf-8
 
 import hydra
+import pytorch_lightning as pl
 import torch
 import transformers
-import pytorch_lightning as pl
-
-from modules.model import models
-from config.hydra import cleanup_hydra
-
-from modules.model.dataloaders import WikiDataset, CollateFn
-from torch.utils.data import DataLoader, random_split, ConcatDataset
 from pytorch_lightning import loggers
 from pytorch_lightning.callbacks import ModelCheckpoint
+from torch.utils.data import ConcatDataset, DataLoader, random_split
+
+from config.hydra import cleanup_hydra
+from modules.model import models
+from modules.model.dataloaders import CollateFn, WikiDataset
 
 
 @cleanup_hydra
-@hydra.main('../../config', 'config.yaml')
+@hydra.main("../../config", "config.yaml")
 def main(cfg):
     transformers.logging.set_verbosity_error()
 
@@ -35,14 +34,14 @@ def main(cfg):
         model.tokenizer,
         use_syntax_features=cfg.model.use_syntax_features,
         word_dropout=cfg.model.word_dropout,
-        multiple_spans=cfg.wikidata.multiple_spans
+        multiple_spans=cfg.wikidata.multiple_spans,
     )
 
     eval_collate_fn = CollateFn(
         model.tokenizer,
         use_syntax_features=cfg.model.use_syntax_features,
         word_dropout=0,
-        multiple_spans=cfg.wikidata.multiple_spans
+        multiple_spans=cfg.wikidata.multiple_spans,
     )
 
     test_loader = DataLoader(test_dataset, batch_size=cfg.model.batch_size, collate_fn=eval_collate_fn, shuffle=False)
@@ -58,14 +57,14 @@ def main(cfg):
         val_loader = DataLoader(val, batch_size=cfg.model.batch_size, collate_fn=eval_collate_fn, shuffle=False)
 
     profiler = "advanced" if cfg.model.profile else None
-    logger = loggers.TensorBoardLogger('./results/logs/')
+    logger = loggers.TensorBoardLogger("./results/logs/")
 
     checkpoint_callback = ModelCheckpoint(
-        filename='best',
+        filename="best",
         save_top_k=1,
         verbose=True,
-        monitor=model_class.get_metric_name('f1_score', 'val', 'epoch'),
-        mode='max'
+        monitor=model_class.get_metric_name("f1_score", "val", "epoch"),
+        mode="max",
     )
 
     def make_trainer(n_epochs: int):
@@ -76,7 +75,7 @@ def main(cfg):
             profiler=profiler,
             log_every_n_steps=cfg.model.log_every_n_steps,
             flush_logs_every_n_steps=cfg.model.log_every_n_steps,
-            callbacks=[checkpoint_callback]
+            callbacks=[checkpoint_callback],
         )
 
     trainer = make_trainer(min(cfg.model.max_epochs, cfg.model.syntetic_data_after_epoch))
@@ -89,12 +88,12 @@ def main(cfg):
             ConcatDataset([train, syntetic_dataset]),
             batch_size=cfg.model.batch_size,
             collate_fn=train_collate_fn,
-            shuffle=True
+            shuffle=True,
         )
 
         trainer = make_trainer(cfg.model.max_epochs - cfg.model.syntetic_data_after_epoch)
         trainer.fit(model, train_loader, val_loader)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

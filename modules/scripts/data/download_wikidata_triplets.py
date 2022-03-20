@@ -10,7 +10,7 @@ from modules.data.wikidata import download_triplets
 
 
 @cleanup_hydra
-@hydra.main('../../../config', 'config.yaml')
+@hydra.main("../../../config", "config.yaml")
 def main(cfg: DictConfig):
     lang = cfg.wikidata.lang
     cfg = cfg.wikidata.crawling
@@ -23,8 +23,9 @@ def main(cfg: DictConfig):
         n_threads=cfg.n_threads,
         sparql_limit=cfg.sparql_limit,
         log=log,
-        lang=lang)
+        lang=lang,
+    )
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

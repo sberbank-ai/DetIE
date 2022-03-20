@@ -1,4 +1,4 @@
-'''
+"""
 Usage:
    benchmark --gold=GOLD_OIE --out=OUTPUT_FILE ( --openiesix=OPENIE6 | --openiefive=OPENIE5 | --stanford=STANFORD_OIE | --ollie=OLLIE_OIE |--reverb=REVERB_OIE | --clausie=CLAUSIE_OIE | --openiefour=OPENIEFOUR_OIE | --props=PROPS_OIE | --tabbed=TABBED_OIE | --benchmarkGold=BENCHMARK_GOLD | --allennlp=ALLENNLP_OIE ) [--exactMatch | --predMatch | --lexicalMatch | --binaryMatch | --simpleMatch | --strictMatch | --bertscoreMatch | --bleuMatch] [--error-file=ERROR_FILE] [--binary] [--single_match]
 
@@ -18,54 +18,57 @@ Options:
                                 sent, prob, pred,arg1, arg2, ...
   --allennlp=ALLENNLP_OIE      Read from allennlp output format
   --exactmatch                 Use exact match when judging whether an extraction is correct.
-'''
+"""
 from __future__ import division
-import docopt
-import string
-import numpy as np
-from sklearn.metrics import precision_recall_curve
-from sklearn.metrics import auc
-import re
+
 import logging
 import pdb
+import re
+import string
+
+import docopt
 import ipdb
+import numpy as np
 from _collections import defaultdict
-
 from oie_readers.openieSixReader import OpenieSixReader
+from sklearn.metrics import auc, precision_recall_curve
 
-logging.basicConfig(level = logging.INFO)
+logging.basicConfig(level=logging.INFO)
 
-from oie_readers.stanfordReader import StanfordReader
-from oie_readers.ollieReader import OllieReader
-from oie_readers.reVerbReader import ReVerbReader
-from oie_readers.clausieReader import ClausieReader
-from oie_readers.openieFourReader import OpenieFourReader
-from oie_readers.openieFiveReader import OpenieFiveReader
-from oie_readers.propsReader import PropSReader
-from oie_readers.tabReader import TabReader
-from oie_readers.benchmarkGoldReader import BenchmarkGoldReader
-from oie_readers.allennlpReader import AllennlpReader
-from oie_readers.goldReader import GoldReader
-
-from matcher import Matcher
-from operator import itemgetter
 import pprint
-from copy import deepcopy, copy
+from copy import copy, deepcopy
+from operator import itemgetter
+
 import ipdb
+from matcher import Matcher
+from oie_readers.allennlpReader import AllennlpReader
+from oie_readers.benchmarkGoldReader import BenchmarkGoldReader
+from oie_readers.clausieReader import ClausieReader
+from oie_readers.goldReader import GoldReader
+from oie_readers.ollieReader import OllieReader
+from oie_readers.openieFiveReader import OpenieFiveReader
+from oie_readers.openieFourReader import OpenieFourReader
+from oie_readers.propsReader import PropSReader
+from oie_readers.reVerbReader import ReVerbReader
+from oie_readers.stanfordReader import StanfordReader
+from oie_readers.tabReader import TabReader
+
 pp = pprint.PrettyPrinter(indent=4)
 
+
 class Benchmark:
-    ''' Compare the gold OIE dataset against a predicted equivalent '''
+    """Compare the gold OIE dataset against a predicted equivalent"""
+
     def __init__(self, gold_fn):
-        ''' Load gold Open IE, this will serve to compare against using the compare function '''
+        """Load gold Open IE, this will serve to compare against using the compare function"""
         gr = GoldReader()
         # gr = AllennlpReader(threshold = None)
         gr.read(gold_fn)
         self.gold = gr.oie
 
-    def compare(self, predicted, matchingFunc, output_fn, error_file = None, binary=False, strategy='sm'):
-        ''' Compare gold against predicted using a specified matching function.
-            Outputs PR curve to output_fn '''
+    def compare(self, predicted, matchingFunc, output_fn, error_file=None, binary=False, strategy="sm"):
+        """Compare gold against predicted using a specified matching function.
+        Outputs PR curve to output_fn"""
 
         y_true = []
         y_scores = []
@@ -104,7 +107,7 @@ class Benchmark:
         # rl = [0 for _ in np.linspace(0,1,num_conf)]
 
         for sent, goldExtractions in gold.items():
-            
+
             if sent in predicted:
                 predictedExtractions = predicted[sent]
             else:
@@ -120,7 +123,7 @@ class Benchmark:
 
             for i, goldEx in enumerate(goldExtractions):
                 for j, predictedEx in enumerate(predictedExtractions):
-                    score = matchingFunc(goldEx, predictedEx,ignoreStopwords = True,ignoreCase = True)
+                    score = matchingFunc(goldEx, predictedEx, ignoreStopwords=True, ignoreCase=True)
                     scores[i][j] = score
 
             # for c, conf in enumerate(confidence_thresholds):
@@ -134,67 +137,64 @@ class Benchmark:
             #         r[c] += max([score[1] for col, score in enumerate(row) if score and predictedExtractions[col].confidence >= conf] or [0] )
             #     rl[c] += len(scores)
 
-                # DEFAULT
-                # if len(scores[0]) > 0:
-                #     for j in range(len(scores[0])):
-                #         if predictedExtractions[j].confidence >= conf:
-                #             p[c] += max([scores[i][j][0] if scores[i][j] else 0 for i in range(len(scores))])
-                #             pl[c] += 1
+            # DEFAULT
+            # if len(scores[0]) > 0:
+            #     for j in range(len(scores[0])):
+            #         if predictedExtractions[j].confidence >= conf:
+            #             p[c] += max([scores[i][j][0] if scores[i][j] else 0 for i in range(len(scores))])
+            #             pl[c] += 1
 
-                # SUBMITTED
-                # selected_indices = []
-                # if len(scores[0]) > 0:
-                #     for j in range(len(scores[0])):
-                #         if predictedExtractions[j].confidence >= conf:
-                #             index = np.argmax([scores[i][j][0] if (i not in selected_indices and scores[i][j]) else 0 for i in range(len(scores))])
-                #             selected_indices.append(index)
-                #             p[c] += scores[index][j][0] #max([scores[i][j][0] if scores[i][j] else 0 for i in range(len(scores))])
-                #             pl[c] += 1
+            # SUBMITTED
+            # selected_indices = []
+            # if len(scores[0]) > 0:
+            #     for j in range(len(scores[0])):
+            #         if predictedExtractions[j].confidence >= conf:
+            #             index = np.argmax([scores[i][j][0] if (i not in selected_indices and scores[i][j]) else 0 for i in range(len(scores))])
+            #             selected_indices.append(index)
+            #             p[c] += scores[index][j][0] #max([scores[i][j][0] if scores[i][j] else 0 for i in range(len(scores))])
+            #             pl[c] += 1
 
+            # GREEDY ORDER OF TRAVERSAL
+            # selected_indices = []
+            # for j in range(len(scores[0])):
+            #     if predictedExtractions[j].confidence >= conf:
+            #         column = [scores[i][j][0] for i in range(len(scores))]
+            #         sorted_indices = np.argsort(column)[::-1]
+            #         for index in sorted_indices:
+            #             if index not in selected_indices:
+            #                 selected_indices.append(index)
+            #                 p[c] += scores[index][j][0]
+            #                 break
+            # pl[c] += len(ext_indices)
 
-                # GREEDY ORDER OF TRAVERSAL
-                # selected_indices = []
-                # for j in range(len(scores[0])):
-                #     if predictedExtractions[j].confidence >= conf:
-                #         column = [scores[i][j][0] for i in range(len(scores))]
-                #         sorted_indices = np.argsort(column)[::-1]
-                #         for index in sorted_indices:
-                #             if index not in selected_indices:
-                #                 selected_indices.append(index)
-                #                 p[c] += scores[index][j][0]
-                #                 break
-                # pl[c] += len(ext_indices)
+            # # GLOBAL MATCH
+            # selected_rows = []
+            # selected_cols = []
+            # num_precision_matches = min(len(scores), len(ext_indices))
+            # for t in range(num_precision_matches):
+            #     matched_row = -1
+            #     matched_col = -1
+            #     matched_precision = -1 # initialised to <0 so that it updates whenever precision is 0 as well
+            #     for i in range(len(scores)):
+            #         if i in selected_rows:
+            #             continue
+            #         for ext_indx in ext_indices:
+            #             if ext_indx in selected_cols:
+            #                 continue
+            #             if scores[i][ext_indx][0] > matched_precision:
+            #                 matched_precision = scores[i][ext_indx][0]
+            #                 matched_row = i
+            #                 matched_col = ext_indx
 
+            #     if matched_col==-1 or matched_row==-1:
+            #         ipdb.set_trace()
+            #         continue
 
-                # # GLOBAL MATCH
-                # selected_rows = []
-                # selected_cols = []
-                # num_precision_matches = min(len(scores), len(ext_indices))
-                # for t in range(num_precision_matches):
-                #     matched_row = -1
-                #     matched_col = -1
-                #     matched_precision = -1 # initialised to <0 so that it updates whenever precision is 0 as well
-                #     for i in range(len(scores)):
-                #         if i in selected_rows:
-                #             continue
-                #         for ext_indx in ext_indices:
-                #             if ext_indx in selected_cols:
-                #                 continue
-                #             if scores[i][ext_indx][0] > matched_precision:
-                #                 matched_precision = scores[i][ext_indx][0]
-                #                 matched_row = i
-                #                 matched_col = ext_indx
-
-                #     if matched_col==-1 or matched_row==-1:
-                #         ipdb.set_trace()
-                #         continue
-
-                #     selected_rows.append(matched_row)
-                #     selected_cols.append(matched_col)
-                #     p[c] += scores[matched_row][matched_col][0]
-                #     # pl[c] += 1
-                # pl[c] += len(ext_indices)
-
+            #     selected_rows.append(matched_row)
+            #     selected_cols.append(matched_col)
+            #     p[c] += scores[matched_row][matched_col][0]
+            #     # pl[c] += 1
+            # pl[c] += len(ext_indices)
 
             # OPTIMISED GLOBAL MATCH
             sent_confidences = [extraction.confidence for extraction in predictedExtractions]
@@ -208,10 +208,10 @@ class Benchmark:
                         ext_indices.append(ext_indx)
 
                 # ksk mod
-                if strategy == 'sm':
+                if strategy == "sm":
                     recall_numerator = 0
                     for i, row in enumerate(scores):
-                        max_recall_row = max([row[ext_indx][1] for ext_indx in ext_indices ], default=0)
+                        max_recall_row = max([row[ext_indx][1] for ext_indx in ext_indices], default=0)
                         recall_numerator += max_recall_row
 
                 precision_numerator = 0
@@ -224,7 +224,7 @@ class Benchmark:
                 for t in range(num_precision_matches):
                     matched_row = -1
                     matched_col = -1
-                    matched_precision = -1 # initialised to <0 so that it updates whenever precision is 0 as well
+                    matched_precision = -1  # initialised to <0 so that it updates whenever precision is 0 as well
                     for i in range(len(scores)):
                         if i in selected_rows:
                             continue
@@ -236,7 +236,7 @@ class Benchmark:
                                 matched_row = i
                                 matched_col = ext_indx
 
-                    if matched_col==-1 or matched_row==-1:
+                    if matched_col == -1 or matched_row == -1:
                         raise Exception("error in CaRB, matched row/col is -1")
 
                     selected_rows.append(matched_row)
@@ -244,7 +244,7 @@ class Benchmark:
                     precision_numerator += scores[matched_row][matched_col][0]
 
                 # ksk mod
-                if strategy == 'ss':
+                if strategy == "ss":
                     recall_numerator = 0
                     selected_rows = []
                     selected_cols = []
@@ -252,7 +252,7 @@ class Benchmark:
                     for t in range(num_recall_matches):
                         matched_row = -1
                         matched_col = -1
-                        matched_recall = -1 # initialised to <0 so that it updates whenever recall is 0 as well
+                        matched_recall = -1  # initialised to <0 so that it updates whenever recall is 0 as well
                         for i in range(len(scores)):
                             if i in selected_rows:
                                 continue
@@ -264,38 +264,47 @@ class Benchmark:
                                     matched_row = i
                                     matched_col = ext_indx
 
-                        if matched_col==-1 or matched_row==-1:
+                        if matched_col == -1 or matched_row == -1:
                             raise Exception("error in CaRB, matched row/col is -1")
 
                         selected_rows.append(matched_row)
                         selected_cols.append(matched_col)
                         recall_numerator += scores[matched_row][matched_col][1]
 
-
-                p[prev_c:c+1] += precision_numerator
-                pl[prev_c:c+1] += len(ext_indices)
+                p[prev_c : c + 1] += precision_numerator
+                pl[prev_c : c + 1] += len(ext_indices)
                 # pl[prev_c:c+1] += num_precision_matches
-                r[prev_c:c+1] += recall_numerator
-                rl[prev_c:c+1] += len(scores)
+                r[prev_c : c + 1] += recall_numerator
+                rl[prev_c : c + 1] += len(scores)
 
-                prev_c = c+1
+                prev_c = c + 1
 
             # for indices beyond the maximum sentence confidence, len(scores) has to be added to the denominator of recall
             rl[prev_c:] += len(scores)
 
-        prec_scores = [a/b if b>0 else 1 for a,b in zip(p,pl) ]
-        rec_scores = [a/b if b>0 else 0 for a,b in zip(r,rl)]
+        prec_scores = [a / b if b > 0 else 1 for a, b in zip(p, pl)]
+        rec_scores = [a / b if b > 0 else 0 for a, b in zip(r, rl)]
 
-        f1s = [Benchmark.f1(p,r) for p,r in zip(prec_scores, rec_scores)]
-        
+        f1s = [Benchmark.f1(p, r) for p, r in zip(prec_scores, rec_scores)]
+
         try:
             optimal_idx = np.nanargmax(f1s)
-            optimal = (np.round(prec_scores[optimal_idx],4), np.round(rec_scores[optimal_idx],4), np.round(f1s[optimal_idx],4), confidence_thresholds[optimal_idx])
-            zero_conf_point = (np.round(prec_scores[0],4), np.round(rec_scores[0],4), np.round(f1s[0],4), confidence_thresholds[0])
+            optimal = (
+                np.round(prec_scores[optimal_idx], 4),
+                np.round(rec_scores[optimal_idx], 4),
+                np.round(f1s[optimal_idx], 4),
+                confidence_thresholds[optimal_idx],
+            )
+            zero_conf_point = (
+                np.round(prec_scores[0], 4),
+                np.round(rec_scores[0], 4),
+                np.round(f1s[0], 4),
+                confidence_thresholds[0],
+            )
         except ValueError:
             # When there is no prediction
-            optimal = (0,0,0,0)
-            zero_conf_point = (0,0,0,0)
+            optimal = (0, 0, 0, 0)
+            zero_conf_point = (0, 0, 0, 0)
 
         # In order to calculate auc, we need to add the point corresponding to precision=1 , recall=0 to the PR-curve
         temp_rec_scores = rec_scores.copy()
@@ -303,43 +312,45 @@ class Benchmark:
         temp_rec_scores.append(0)
         temp_prec_scores.append(1)
         # print("AUC: {}\t Optimal (precision, recall, F1): {}".format( np.round(auc(temp_rec_scores, temp_prec_scores),3), np.round(optimal,3) ))
-        
-        with open(output_fn, 'w') as fout:
-            fout.write('{0}\t{1}\t{2}\n'.format("Precision", "Recall", "Confidence"))
-            for cur_p, cur_r, cur_conf in sorted(zip(prec_scores, rec_scores, confidence_thresholds), key = lambda cur: cur[1]):
-               fout.write('{0}\t{1}\t{2}\n'.format(cur_p, cur_r, cur_conf))
 
-        if len(f1s)>0:
-            return np.round(auc(temp_rec_scores, temp_prec_scores),4), optimal, zero_conf_point
+        with open(output_fn, "w") as fout:
+            fout.write("{0}\t{1}\t{2}\n".format("Precision", "Recall", "Confidence"))
+            for cur_p, cur_r, cur_conf in sorted(
+                zip(prec_scores, rec_scores, confidence_thresholds), key=lambda cur: cur[1]
+            ):
+                fout.write("{0}\t{1}\t{2}\n".format(cur_p, cur_r, cur_conf))
+
+        if len(f1s) > 0:
+            return np.round(auc(temp_rec_scores, temp_prec_scores), 4), optimal, zero_conf_point
             # return 0, optimal, zero_conf_point
         else:
             # When there is no prediction
-            return 0, (0,0,0,0), (0,0,0,0)
+            return 0, (0, 0, 0, 0), (0, 0, 0, 0)
 
     @staticmethod
     def binarize(extrs):
         res = defaultdict(lambda: [])
-        for sent,extr in extrs.items():
+        for sent, extr in extrs.items():
             for ex in extr:
-                #Add (a1, r, a2)
+                # Add (a1, r, a2)
                 temp = copy(ex)
                 temp.args = ex.args[:2]
                 res[sent].append(temp)
-                
+
                 if len(ex.args) <= 2:
                     continue
-                
-                #Add (a1, r a2 , a3 ...)
+
+                # Add (a1, r a2 , a3 ...)
                 for arg in ex.args[2:]:
                     temp.args = [ex.args[0]]
-                    temp.pred = ex.pred + ' '  + ex.args[1]
+                    temp.pred = ex.pred + " " + ex.args[1]
                     words = arg.split()
 
-                    #Add preposition of arg to rel
+                    # Add preposition of arg to rel
                     if words[0].lower() in Benchmark.PREPS:
-                        temp.pred += ' ' + words[0]
+                        temp.pred += " " + words[0]
                         words = words[1:]
-                    temp.args.append(' '.join(words))
+                    temp.args.append(" ".join(words))
                     res[sent].append(temp)
 
         return res
@@ -347,7 +358,7 @@ class Benchmark:
     @staticmethod
     def f1(prec, rec):
         try:
-            return 2*prec*rec / (prec+rec)
+            return 2 * prec * rec / (prec + rec)
         except ZeroDivisionError:
             return 0
 
@@ -376,14 +387,15 @@ class Benchmark:
                 break
             matches.append([gold, pred])
         # Now that matches are determined, compute final scores.
-        prec_scores = [scores[i][j][0] for i,j in matches]
-        rec_scores = [scores[i][j][1] for i,j in matches]
+        prec_scores = [scores[i][j][0] for i, j in matches]
+        rec_scores = [scores[i][j][1] for i, j in matches]
         total_prec = sum(prec_scores)
         total_rec = sum(rec_scores)
-        scoring_metrics = {"precision" : [total_prec, len(scores[0])],
-                           "recall" : [total_rec, len(scores)],
-                           "precision_of_matches" : prec_scores,
-                           "recall_of_matches" : rec_scores
+        scoring_metrics = {
+            "precision": [total_prec, len(scores[0])],
+            "recall": [total_rec, len(scores)],
+            "precision_of_matches": prec_scores,
+            "recall_of_matches": rec_scores,
         }
         # print(scoring_metrics)
         return scoring_metrics
@@ -396,7 +408,7 @@ class Benchmark:
     @staticmethod
     def normalizeKey(k):
         # return Benchmark.removePunct(unicode(Benchmark.PTB_unescape(k.replace(' ','')), errors = 'ignore'))
-        return Benchmark.removePunct(str(Benchmark.PTB_unescape(k.replace(' ',''))))
+        return Benchmark.removePunct(str(Benchmark.PTB_unescape(k.replace(" ", ""))))
 
     @staticmethod
     def PTB_escape(s):
@@ -412,120 +424,156 @@ class Benchmark:
 
     @staticmethod
     def removePunct(s):
-        return Benchmark.regex.sub('', s) 
+        return Benchmark.regex.sub("", s)
 
     # CONSTANTS
-    regex = re.compile('[%s]' % re.escape(string.punctuation))
+    regex = re.compile("[%s]" % re.escape(string.punctuation))
 
     # Penn treebank bracket escapes
     # Taken from: https://github.com/nlplab/brat/blob/master/server/src/gtbtokenize.py
-    PTB_ESCAPES = [('(', '-LRB-'),
-                   (')', '-RRB-'),
-                   ('[', '-LSB-'),
-                   (']', '-RSB-'),
-                   ('{', '-LCB-'),
-                   ('}', '-RCB-'),]
+    PTB_ESCAPES = [
+        ("(", "-LRB-"),
+        (")", "-RRB-"),
+        ("[", "-LSB-"),
+        ("]", "-RSB-"),
+        ("{", "-LCB-"),
+        ("}", "-RCB-"),
+    ]
 
-    PREPS = ['above','across','against','along','among','around','at','before','behind','below','beneath','beside','between','by','for','from','in','into','near','of','off','on','to','toward','under','upon','with','within']
+    PREPS = [
+        "above",
+        "across",
+        "against",
+        "along",
+        "among",
+        "around",
+        "at",
+        "before",
+        "behind",
+        "below",
+        "beneath",
+        "beside",
+        "between",
+        "by",
+        "for",
+        "from",
+        "in",
+        "into",
+        "near",
+        "of",
+        "off",
+        "on",
+        "to",
+        "toward",
+        "under",
+        "upon",
+        "with",
+        "within",
+    ]
 
-def f_beta(precision, recall, beta = 1):
+
+def f_beta(precision, recall, beta=1):
     """
     Get F_beta score from precision and recall.
     """
-    beta = float(beta) # Make sure that results are in float
+    beta = float(beta)  # Make sure that results are in float
     return (1 + pow(beta, 2)) * (precision * recall) / ((pow(beta, 2) * precision) + recall)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     args = docopt.docopt(__doc__)
     logging.debug(args)
 
-    if args['--stanford']:
+    if args["--stanford"]:
         predicted = StanfordReader()
-        predicted.read(args['--stanford'])
+        predicted.read(args["--stanford"])
 
-    if args['--props']:
+    if args["--props"]:
         predicted = PropSReader()
-        predicted.read(args['--props'])
+        predicted.read(args["--props"])
 
-    if args['--ollie']:
+    if args["--ollie"]:
         predicted = OllieReader()
-        predicted.read(args['--ollie'])
+        predicted.read(args["--ollie"])
 
-    if args['--reverb']:
+    if args["--reverb"]:
         predicted = ReVerbReader()
-        predicted.read(args['--reverb'])
+        predicted.read(args["--reverb"])
 
-    if args['--clausie']:
+    if args["--clausie"]:
         predicted = ClausieReader()
-        predicted.read(args['--clausie'])
+        predicted.read(args["--clausie"])
 
-    if args['--openiefour']:
+    if args["--openiefour"]:
         predicted = OpenieFourReader()
-        predicted.read(args['--openiefour'])
+        predicted.read(args["--openiefour"])
 
-    if args['--openiefive']:
+    if args["--openiefive"]:
         predicted = OpenieFiveReader()
-        predicted.read(args['--openiefive'])
+        predicted.read(args["--openiefive"])
 
-    if args['--openiesix']:
+    if args["--openiesix"]:
         predicted = OpenieSixReader()
-        predicted.read(args['--openiesix'])
+        predicted.read(args["--openiesix"])
 
-    if args['--benchmarkGold']:
+    if args["--benchmarkGold"]:
         predicted = BenchmarkGoldReader()
-        predicted.read(args['--benchmarkGold'])
- 
-    if args['--tabbed']:
+        predicted.read(args["--benchmarkGold"])
+
+    if args["--tabbed"]:
         predicted = TabReader()
-        predicted.read(args['--tabbed'])
+        predicted.read(args["--tabbed"])
 
-    if args['--allennlp']:
-        predicted = AllennlpReader(threshold = None)
-        predicted.read(args['--allennlp'])
+    if args["--allennlp"]:
+        predicted = AllennlpReader(threshold=None)
+        predicted.read(args["--allennlp"])
 
-    if args['--binaryMatch']:
+    if args["--binaryMatch"]:
         matchingFunc = Matcher.binary_tuple_match
 
-    elif args['--simpleMatch']:
+    elif args["--simpleMatch"]:
         matchingFunc = Matcher.simple_tuple_match
 
-    elif args['--exactMatch']:
+    elif args["--exactMatch"]:
         matchingFunc = Matcher.argMatch
 
-    elif args['--predMatch']:
+    elif args["--predMatch"]:
         matchingFunc = Matcher.predMatch
 
-    elif args['--lexicalMatch']:
+    elif args["--lexicalMatch"]:
         matchingFunc = Matcher.lexicalMatch
 
-    elif args['--strictMatch']:
+    elif args["--strictMatch"]:
         matchingFunc = Matcher.tuple_match
 
-    elif args['--bertscoreMatch']:
+    elif args["--bertscoreMatch"]:
         matchingFunc = Matcher.bert_score_match
 
-    elif args['--bleuMatch']:
-        matchingFunc = Matcher.bleuMatch        
+    elif args["--bleuMatch"]:
+        matchingFunc = Matcher.bleuMatch
 
     else:
         matchingFunc = Matcher.binary_linient_tuple_match
 
-    b = Benchmark(args['--gold'])
-    out_filename = args['--out']
+    b = Benchmark(args["--gold"])
+    out_filename = args["--out"]
 
     # logging.info("Writing PR curve of {} to {}".format(predicted.name, out_filename))
 
     if args["--single_match"]:
-        strategy = 'ss'
+        strategy = "ss"
     else:
-        strategy = 'sm'
+        strategy = "sm"
 
-    auc, optimal_f1_point, zero_conf_point = b.compare(predicted = predicted.oie,
-                            matchingFunc = matchingFunc,
-                            output_fn = out_filename,
-                            error_file = args["--error-file"],
-                            binary = args["--binary"],
-                            strategy=strategy)
+    auc, optimal_f1_point, zero_conf_point = b.compare(
+        predicted=predicted.oie,
+        matchingFunc=matchingFunc,
+        output_fn=out_filename,
+        error_file=args["--error-file"],
+        binary=args["--binary"],
+        strategy=strategy,
+    )
 
-    print("AUC: {} Opt: (Pr, Re, F1): {} 0-Conf (Pr, Re, F1): {}".format(auc, optimal_f1_point[:3], zero_conf_point[:3] ))
+    print(
+        "AUC: {} Opt: (Pr, Re, F1): {} 0-Conf (Pr, Re, F1): {}".format(auc, optimal_f1_point[:3], zero_conf_point[:3])
+    )

@@ -1,23 +1,25 @@
-
 try:
     from sklearn.preprocessing.data import binarize
 except:
     from sklearn.preprocessing import binarize
 
-from oie_readers.argument import Argument
-from operator import itemgetter
-from collections import defaultdict
-import nltk
 import itertools
 import logging
-import numpy as np
 import pdb
+from collections import defaultdict
+from operator import itemgetter
+
+import nltk
+import numpy as np
+from oie_readers.argument import Argument
+
 
 class Extraction:
     """
     Stores sentence, single predicate and corresponding arguments.
     """
-    def __init__(self, pred, head_pred_index, sent, confidence, question_dist = '', index = -1):
+
+    def __init__(self, pred, head_pred_index, sent, confidence, question_dist="", index=-1):
         self.pred = pred
         self.head_pred_index = head_pred_index
         self.sent = sent
@@ -31,7 +33,7 @@ class Extraction:
         self.index = index
 
     def distArgFromPred(self, arg):
-        assert(len(self.pred) == 2)
+        assert len(self.pred) == 2
         dists = []
         for x in self.pred[1]:
             for y in arg.indices:
@@ -40,12 +42,12 @@ class Extraction:
         return min(dists)
 
     def argsByDistFromPred(self, question):
-        return sorted(self.questions[question], key = lambda arg: self.distArgFromPred(arg))
+        return sorted(self.questions[question], key=lambda arg: self.distArgFromPred(arg))
 
-    def addArg(self, arg, question = None):
+    def addArg(self, arg, question=None):
         self.args.append(arg)
         if question:
-            self.questions[question] = self.questions.get(question,[]) + [Argument(arg)]
+            self.questions[question] = self.questions.get(question, []) + [Argument(arg)]
 
     def noPronounArgs(self):
         """
@@ -55,7 +57,7 @@ class Extraction:
             tokenized_arg = nltk.word_tokenize(a)
             if len(tokenized_arg) == 1:
                 _, pos_tag = nltk.pos_tag(tokenized_arg)[0]
-                if ('PRP' in pos_tag):
+                if "PRP" in pos_tag:
                     return False
         return True
 
@@ -63,8 +65,8 @@ class Extraction:
         return all([indices for (_, indices) in self.args])
 
     def toBinary(self):
-        ''' Try to represent this extraction's arguments as binary
-        If fails, this function will return an empty list.  '''
+        """Try to represent this extraction's arguments as binary
+        If fails, this function will return an empty list."""
 
         ret = [self.elementToStr(self.pred)]
 
@@ -87,10 +89,9 @@ class Extraction:
 
         return []
 
-
-    def elementToStr(self, elem, print_indices = True):
-        ''' formats an extraction element (pred or arg) as a raw string
-        removes indices and trailing spaces '''
+    def elementToStr(self, elem, print_indices=True):
+        """formats an extraction element (pred or arg) as a raw string
+        removes indices and trailing spaces"""
         if print_indices:
             return str(elem)
         if isinstance(elem, str):
@@ -98,15 +99,20 @@ class Extraction:
         if isinstance(elem, tuple):
             ret = elem[0].rstrip().lstrip()
         else:
-            ret = ' '.join(elem.words)
+            ret = " ".join(elem.words)
         assert ret, "empty element? {0}".format(elem)
         return ret
 
     def binarizeByIndex(self):
         extraction = [self.pred] + self.args
         markPred = [(w, ind, i == 0) for i, (w, ind) in enumerate(extraction)]
-        sortedExtraction = sorted(markPred, key = lambda ws, indices, f : indices[0])
-        s =  ' '.join(['{1} {0} {1}'.format(self.elementToStr(elem), SEP) if elem[2] else self.elementToStr(elem) for elem in sortedExtraction])
+        sortedExtraction = sorted(markPred, key=lambda ws, indices, f: indices[0])
+        s = " ".join(
+            [
+                "{1} {0} {1}".format(self.elementToStr(elem), SEP) if elem[2] else self.elementToStr(elem)
+                for elem in sortedExtraction
+            ]
+        )
         binArgs = [a for a in s.split(SEP) if a.rstrip().lstrip()]
 
         if len(binArgs) == 2:
@@ -116,7 +122,7 @@ class Extraction:
         return []
 
     def bow(self):
-        return ' '.join([self.elementToStr(elem) for elem in [self.pred] + self.args])
+        return " ".join([self.elementToStr(elem) for elem in [self.pred] + self.args])
 
     def getSortedArgs(self):
         """
@@ -129,7 +135,7 @@ class Extraction:
             return self.sort_args_by_distribution()
         ls = []
         for q, args in self.questions.iteritems():
-            if (len(args) != 1):
+            if len(args) != 1:
                 logging.debug("Not one argument: {}".format(args))
                 continue
             arg = args[0]
@@ -138,8 +144,7 @@ class Extraction:
                 logging.debug("Empty indexes for arg {} -- backing to zero".format(arg))
                 indices = [0]
             ls.append(((arg, q), indices))
-        return [a for a, _ in sorted(ls,
-                                     key = lambda _, indices: min(indices))]
+        return [a for a, _ in sorted(ls, key=lambda _, indices: min(indices))]
 
     def question_prob_for_loc(self, question, loc):
         """
@@ -148,11 +153,9 @@ class Extraction:
         """
         gen_question = generalize_question(question)
         q_dist = self.question_dist[gen_question]
-        logging.debug("distribution of {}: {}".format(gen_question,
-                                                      q_dist))
+        logging.debug("distribution of {}: {}".format(gen_question, q_dist))
 
-        return float(q_dist.get(loc, 0)) /  \
-            sum(q_dist.values())
+        return float(q_dist.get(loc, 0)) / sum(q_dist.values())
 
     def sort_args_by_distribution(self):
         """
@@ -167,33 +170,33 @@ class Extraction:
         2.1 Assign to it the most probable slot still available
         2.2 If non such exist (fallback) - default to put it in the last location
         """
-        INF_LOC = 100 # Used as an impractical last argument
+        INF_LOC = 100  # Used as an impractical last argument
 
         # Store arguments by slot
         ret = {INF_LOC: []}
         logging.debug("sorting: {}".format(self.questions))
 
         # Find the most suitable arguemnt for the subject location
-        logging.debug("probs for subject: {}".format([(q, self.question_prob_for_loc(q, 0))
-                                                      for (q, _) in self.questions.iteritems()]))
+        logging.debug(
+            "probs for subject: {}".format(
+                [(q, self.question_prob_for_loc(q, 0)) for (q, _) in self.questions.iteritems()]
+            )
+        )
 
-        subj_question, subj_args = max(self.questions.iteritems(),
-                                       key = lambda q, _: self.question_prob_for_loc(q, 0))
+        subj_question, subj_args = max(self.questions.iteritems(), key=lambda q, _: self.question_prob_for_loc(q, 0))
 
         ret[0] = [(subj_args[0], subj_question)]
 
         # Find the rest
-        for (question, args) in sorted([(q, a)
-                                        for (q, a) in self.questions.iteritems() if (q not in [subj_question])],
-                                       key = lambda q, _: \
-                                       sum(self.question_dist[generalize_question(q)].values()),
-                                       reverse = True):
+        for (question, args) in sorted(
+            [(q, a) for (q, a) in self.questions.iteritems() if (q not in [subj_question])],
+            key=lambda q, _: sum(self.question_dist[generalize_question(q)].values()),
+            reverse=True,
+        ):
             gen_question = generalize_question(question)
             arg = args[0]
             assigned_flag = False
-            for (loc, count) in sorted(self.question_dist[gen_question].iteritems(),
-                                       key = lambda _ , c: c,
-                                       reverse = True):
+            for (loc, count) in sorted(self.question_dist[gen_question].iteritems(), key=lambda _, c: c, reverse=True):
                 if loc not in ret:
                     # Found an empty slot for this item
                     # Place it there and break out
@@ -209,20 +212,20 @@ class Extraction:
         logging.debug("Linearizing arg list: {}".format(ret))
 
         # Finished iterating - consolidate and return a list of arguments
-        return [arg
-                for (_, arg_ls) in sorted(ret.iteritems(),
-                                          key = lambda k, v: int(k))
-                for arg in arg_ls]
-
+        return [arg for (_, arg_ls) in sorted(ret.iteritems(), key=lambda k, v: int(k)) for arg in arg_ls]
 
     def __str__(self):
         pred_str = self.elementToStr(self.pred)
-        return '{}\t{}\t{}'.format(self.get_base_verb(pred_str),
-                                   self.compute_global_pred(pred_str,
-                                                            self.questions.keys()),
-                                   '\t'.join([escape_special_chars(self.augment_arg_with_question(self.elementToStr(arg),
-                                                                                                  question))
-                                              for arg, question in self.getSortedArgs()]))
+        return "{}\t{}\t{}".format(
+            self.get_base_verb(pred_str),
+            self.compute_global_pred(pred_str, self.questions.keys()),
+            "\t".join(
+                [
+                    escape_special_chars(self.augment_arg_with_question(self.elementToStr(arg), question))
+                    for arg, question in self.getSortedArgs()
+                ]
+            ),
+        )
 
     def get_base_verb(self, surface_pred):
         """
@@ -230,8 +233,7 @@ class Extraction:
         """
         # Assumes that at this point the verb is always the last word
         # in the surface predicate
-        return surface_pred.split(' ')[-1]
-
+        return surface_pred.split(" ")[-1]
 
     def compute_global_pred(self, surface_pred, questions):
         """
@@ -240,22 +242,20 @@ class Extraction:
         This should hopefully take care of multi word predicates and correct inflections
         """
         from operator import itemgetter
-        split_surface = surface_pred.split(' ')
+
+        split_surface = surface_pred.split(" ")
 
         if len(split_surface) > 1:
             # This predicate has a modal preceding the base verb
             verb = split_surface[-1]
-            ret = split_surface[:-1] # get all of the elements in the modal
+            ret = split_surface[:-1]  # get all of the elements in the modal
         else:
             verb = split_surface[0]
             ret = []
 
-        split_questions = map(lambda question: question.split(' '),
-                            questions)
+        split_questions = map(lambda question: question.split(" "), questions)
 
-        preds = map(normalize_element,
-                    map(itemgetter(QUESTION_TRG_INDEX),
-                        split_questions))
+        preds = map(normalize_element, map(itemgetter(QUESTION_TRG_INDEX), split_questions))
         if len(set(preds)) > 1:
             # This predicate is appears in multiple ways, let's stick to the base form
             ret.append(verb)
@@ -265,23 +265,18 @@ class Extraction:
             # if there's exactly one way in which the predicate is conveyed
             ret.append(preds[0])
 
-            pps = map(normalize_element,
-                      map(itemgetter(QUESTION_PP_INDEX),
-                          split_questions))
+            pps = map(normalize_element, map(itemgetter(QUESTION_PP_INDEX), split_questions))
 
-            obj2s = map(normalize_element,
-                        map(itemgetter(QUESTION_OBJ2_INDEX),
-                            split_questions))
+            obj2s = map(normalize_element, map(itemgetter(QUESTION_OBJ2_INDEX), split_questions))
 
-            if (len(set(pps)) == 1):
+            if len(set(pps)) == 1:
                 # If all questions for the predicate include the same pp attachemnt -
                 # assume it's a multiword predicate
-                self.is_mwp = True # Signal to arguments that they shouldn't take the preposition
+                self.is_mwp = True  # Signal to arguments that they shouldn't take the preposition
                 ret.append(pps[0])
 
         # Concat all elements in the predicate and return
         return " ".join(ret).strip()
-
 
     def augment_arg_with_question(self, arg, question):
         """
@@ -289,17 +284,17 @@ class Extraction:
         corresponding argument
         """
         # Parse question
-        wh, aux, sbj, trg, obj1, pp, obj2 = map(normalize_element,
-                                                question.split(' ')[:-1]) # Last split is the question mark
+        wh, aux, sbj, trg, obj1, pp, obj2 = map(
+            normalize_element, question.split(" ")[:-1]
+        )  # Last split is the question mark
 
         # Place preposition in argument
         # This is safer when dealing with n-ary arguments, as it's directly attaches to the
         # appropriate argument
         if (not self.is_mwp) and pp and (not obj2):
-            if not(arg.startswith("{} ".format(pp))):
+            if not (arg.startswith("{} ".format(pp))):
                 # Avoid repeating the preporition in cases where both question and answer contain it
-                return " ".join([pp,
-                                 arg])
+                return " ".join([pp, arg])
 
         # Normal cases
         return arg
@@ -313,7 +308,7 @@ class Extraction:
 
         # Find global centroid
         arr = np.array([x for ls in cluster for x in ls])
-        centroid = np.sum(arr)/arr.shape[0]
+        centroid = np.sum(arr) / arr.shape[0]
         logging.debug("Centroid: {}".format(centroid))
 
         # Calculate mean over all maxmimum points
@@ -328,11 +323,7 @@ class Extraction:
         ## Part of these are non-consecutive arguments,
         ## but other could be a bug in recognizing some punctuation marks
 
-        elements = [self.pred] \
-                   + [(s, indices)
-                      for (s, indices)
-                      in self.args
-                      if indices]
+        elements = [self.pred] + [(s, indices) for (s, indices) in self.args if indices]
         logging.debug("Resolving ambiguity in: {}".format(elements))
 
         # Collect all possible combinations of arguments and predicate indices
@@ -341,26 +332,32 @@ class Extraction:
         logging.debug("Number of combinations: {}".format(len(all_combinations)))
 
         # Choose the ones with best clustering and unfold them
-        resolved_elements = zip(map(itemgetter(0), elements),
-                                min(all_combinations,
-                                    key = lambda cluster: self.clusterScore(cluster)))
+        resolved_elements = zip(
+            map(itemgetter(0), elements), min(all_combinations, key=lambda cluster: self.clusterScore(cluster))
+        )
         logging.debug("Resolved elements = {}".format(resolved_elements))
 
         self.pred = resolved_elements[0]
         self.args = resolved_elements[1:]
 
-    def conll(self, external_feats = {}):
+    def conll(self, external_feats={}):
         """
         Return a CoNLL string representation of this extraction
         """
-        return '\n'.join(["\t".join(map(str,
-                                        [i, w] + \
-                                        list(self.pred) + \
-                                        [self.head_pred_index] + \
-                                        external_feats + \
-                                        [self.get_label(i)]))
-                          for (i, w)
-                          in enumerate(self.sent.split(" "))]) + '\n'
+        return (
+            "\n".join(
+                [
+                    "\t".join(
+                        map(
+                            str,
+                            [i, w] + list(self.pred) + [self.head_pred_index] + external_feats + [self.get_label(i)],
+                        )
+                    )
+                    for (i, w) in enumerate(self.sent.split(" "))
+                ]
+            )
+            + "\n"
+        )
 
     def get_label(self, index):
         """
@@ -368,11 +365,11 @@ class Extraction:
         Assumes that ambiguation was already resolved.
         """
         # Get the element(s) in which this index appears
-        ent = [(elem_ind, elem)
-               for (elem_ind, elem)
-               in enumerate(map(itemgetter(1),
-                                [self.pred] + self.args))
-               if index in elem]
+        ent = [
+            (elem_ind, elem)
+            for (elem_ind, elem) in enumerate(map(itemgetter(1), [self.pred] + self.args))
+            if index in elem
+        ]
 
         if not ent:
             # index doesnt appear in any element
@@ -381,13 +378,11 @@ class Extraction:
         if len(ent) > 1:
             # The same word appears in two different answers
             # In this case we choose the first one as label
-            logging.warn("Index {} appears in one than more element: {}".\
-                         format(index,
-                                "\t".join(map(str,
-                                              [ent,
-                                               self.sent,
-                                               self.pred,
-                                               self.args]))))
+            logging.warn(
+                "Index {} appears in one than more element: {}".format(
+                    index, "\t".join(map(str, [ent, self.sent, self.pred, self.args]))
+                )
+            )
 
         ## Some indices appear in more than one argument (ones where the above message appears)
         ## From empricial observation, these seem to mostly consist of different levels of granularity:
@@ -396,7 +391,7 @@ class Extraction:
         ## In these cases we heuristically choose the shorter answer span, hopefully creating minimal spans
         ## E.g., in this example two arguemnts are created: (loan commitments, topping $ 3 billion)
 
-        elem_ind, elem = min(ent, key = lambda _, ls: len(ls))
+        elem_ind, elem = min(ent, key=lambda _, ls: len(ls))
 
         # Distinguish between predicate and arguments
         prefix = "P" if elem_ind == 0 else "A{}".format(elem_ind - 1)
@@ -407,11 +402,10 @@ class Extraction:
         return "{}-{}".format(prefix, suffix)
 
     def __str__(self):
-        return '{0}\t{1}'.format(self.elementToStr(self.pred,
-                                                   print_indices = True),
-                                 '\t'.join([self.elementToStr(arg)
-                                            for arg
-                                            in self.args]))
+        return "{0}\t{1}".format(
+            self.elementToStr(self.pred, print_indices=True), "\t".join([self.elementToStr(arg) for arg in self.args])
+        )
+
 
 # Flatten a list of lists
 flatten = lambda l: [item for sublist in l for item in sublist]
@@ -422,13 +416,12 @@ def normalize_element(elem):
     Return a surface form of the given question element.
     the output should be properly able to precede a predicate (or blank otherwise)
     """
-    return elem.replace("_", " ") \
-        if (elem != "_")\
-           else ""
+    return elem.replace("_", " ") if (elem != "_") else ""
+
 
 ## Helper functions
 def escape_special_chars(s):
-    return s.replace('\t', '\\t')
+    return s.replace("\t", "\\t")
 
 
 def generalize_question(question):
@@ -436,14 +429,14 @@ def generalize_question(question):
     Given a question in the context of the sentence and the predicate index within
     the question - return a generalized version which extracts only order-imposing features
     """
-    import nltk   # Using nltk since couldn't get spaCy to agree on the tokenization
-    wh, aux, sbj, trg, obj1, pp, obj2 = question.split(' ')[:-1] # Last split is the question mark
-    return ' '.join([wh, sbj, obj1])
+    import nltk  # Using nltk since couldn't get spaCy to agree on the tokenization
 
+    wh, aux, sbj, trg, obj1, pp, obj2 = question.split(" ")[:-1]  # Last split is the question mark
+    return " ".join([wh, sbj, obj1])
 
 
 ## CONSTANTS
-SEP = ';;;'
-QUESTION_TRG_INDEX =  3 # index of the predicate within the question
+SEP = ";;;"
+QUESTION_TRG_INDEX = 3  # index of the predicate within the question
 QUESTION_PP_INDEX = 5
 QUESTION_OBJ2_INDEX = 6

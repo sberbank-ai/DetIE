@@ -1,6 +1,5 @@
 # coding: utf-8
 import hydra
-
 import pandas as pd
 from omegaconf import DictConfig
 from tqdm import tqdm
@@ -10,7 +9,6 @@ from modules.model import models
 
 
 class DetIETripletExtractor:
-
     def __init__(self, cfg=None, model_name=None, best_ckpt_path=None, best_hparams_path=None, most_common=False):
         # super().__new__(cls)
         self.most_common = most_common
@@ -18,12 +16,14 @@ class DetIETripletExtractor:
             self.model = getattr(models, cfg.model.name).load_from_checkpoint(
                 checkpoint_path=cfg.model.best_ckpt_path,
                 hparams_file=cfg.model.best_hparams_path,
-                scheduler_cfg=cfg.scheduler)
+                scheduler_cfg=cfg.scheduler,
+            )
         else:
             self.model = getattr(models, model_name).load_from_checkpoint(
                 checkpoint_path=best_ckpt_path,
                 hparams_file=best_hparams_path,
-                scheduler_cfg=DictConfig({"name": "ExponentialLR", "gamma": 1}))
+                scheduler_cfg=DictConfig({"name": "ExponentialLR", "gamma": 1}),
+            )
 
     def __call__(self, text: str):
         triplets = self.model.predict([text], most_common=self.most_common)[0]
@@ -36,13 +36,19 @@ def prepare_detie_ollie_format(sentences_raw_file_path, save_file_path, cfg, sav
         mte = DetIETripletExtractor(cfg, most_common=most_common)
     except Exception as e:
         print(e, "moving on...")
-        mte = DetIETripletExtractor(model_name=cfg.model.name,
-                                     best_ckpt_path=cfg.model.best_ckpt_path,
-                                     best_hparams_path=cfg.model.best_hparams_path,
-                                     most_common=most_common)
+        mte = DetIETripletExtractor(
+            model_name=cfg.model.name,
+            best_ckpt_path=cfg.model.best_ckpt_path,
+            best_hparams_path=cfg.model.best_hparams_path,
+            most_common=most_common,
+        )
 
-    print(mte("To say of what is that it is not , or of what is not that it is , is false , "
-              "while to say of what is that it is , and of what is not that it is not , is true ."))
+    print(
+        mte(
+            "To say of what is that it is not , or of what is not that it is , is false , "
+            "while to say of what is that it is , and of what is not that it is not , is true ."
+        )
+    )
 
     # quit()
 
@@ -50,16 +56,17 @@ def prepare_detie_ollie_format(sentences_raw_file_path, save_file_path, cfg, sav
         raw_sentences = list(set([line.strip() for line in rf if line.strip()]))
 
     # confidence	arg1	rel	arg2	enabler	attribution	text	pattern	dependencies
-    future_dataframe = {"confidence": 1.0,  # we don't do confidence
-                        "arg1": [],
-                        "rel": [],
-                        "arg2": [],
-                        "enabler": None,  # we don't do that
-                        "attribution": None,  # we don't do that
-                        "text": [],
-                        "pattern": None,  # we don't do that
-                        "dependencies": None  # we don't do that
-                        }
+    future_dataframe = {
+        "confidence": 1.0,  # we don't do confidence
+        "arg1": [],
+        "rel": [],
+        "arg2": [],
+        "enabler": None,  # we don't do that
+        "attribution": None,  # we don't do that
+        "text": [],
+        "pattern": None,  # we don't do that
+        "dependencies": None,  # we don't do that
+    }
 
     for raw_sentence in tqdm(raw_sentences):
         oie_spans = mte(raw_sentence)
@@ -79,7 +86,7 @@ def prepare_detie_ollie_format(sentences_raw_file_path, save_file_path, cfg, sav
 
 
 # @cleanup_hydra
-@hydra.main('../../../../config', 'config.yaml')
+@hydra.main("../../../../config", "config.yaml")
 def main(cfg):
     VERSION = 276
     cfg.model.best_version = VERSION
@@ -111,5 +118,5 @@ def main(cfg):
                         # raise e
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

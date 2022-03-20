@@ -1,9 +1,10 @@
 # coding:utf-8
 import stanza
-from stanza import Pipeline, Document
+from stanza import Document, Pipeline
 from transformers import BertTokenizerFast
 
-from .tags import UD_DEPREL_IDS, UPOS_TAGS_IDS, INV_UPOS_TAGS_IDS, INV_UD_DEPREL_IDS
+from .tags import (INV_UD_DEPREL_IDS, INV_UPOS_TAGS_IDS, UD_DEPREL_IDS,
+                   UPOS_TAGS_IDS)
 
 
 def parse_span_stanza(misc: str):
@@ -102,13 +103,15 @@ def syntax_based_features_for_bpe(paragraph: str, syntax_model: Pipeline, tokeni
 
 
 if __name__ == "__main__":
-    TEST_TEXT = "Tragedy We sing in the garden. Martie sings in the shower.  " \
-    "Aslan Maskhadov, " \
-    "the separatist  president of Chechnya (ChRI),  opposed the invasion of Dagestan, " \
-    "and offered a crackdown on the renegade warlords."
+    TEST_TEXT = (
+        "Tragedy We sing in the garden. Martie sings in the shower.  "
+        "Aslan Maskhadov, "
+        "the separatist  president of Chechnya (ChRI),  opposed the invasion of Dagestan, "
+        "and offered a crackdown on the renegade warlords."
+    )
 
     # stanza.download("en")
-    pipeline = stanza.Pipeline(lang='en', processors="tokenize,pos,lemma,depparse")
+    pipeline = stanza.Pipeline(lang="en", processors="tokenize,pos,lemma,depparse")
     tokenizer = BertTokenizerFast.from_pretrained("bert-base-uncased")
     bpe_tokens = tokenizer(TEST_TEXT).tokens()
 
@@ -123,8 +126,10 @@ if __name__ == "__main__":
 
     print()
     heads, pos_tags, deprel_tags = syntax_based_features_for_bpe(TEST_TEXT, pipeline, tokenizer)
-    print(heads, pos_tags, deprel_tags, sep='\n')
+    print(heads, pos_tags, deprel_tags, sep="\n")
 
     for t, (h, (p_t, d_t)) in zip(bpe_tokens, zip(heads, zip(pos_tags, deprel_tags))):
-        print("%10s [%5s][%6s] <- %10s" % (
-            t, INV_UPOS_TAGS_IDS[p_t], INV_UD_DEPREL_IDS[d_t], bpe_tokens[h] if h is not None else "None"))
+        print(
+            "%10s [%5s][%6s] <- %10s"
+            % (t, INV_UPOS_TAGS_IDS[p_t], INV_UD_DEPREL_IDS[d_t], bpe_tokens[h] if h is not None else "None")
+        )

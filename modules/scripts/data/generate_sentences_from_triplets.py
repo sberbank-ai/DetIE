@@ -14,15 +14,15 @@ from modules.data.wikidata import filter_triplets_by_relation
 
 
 @cleanup_hydra
-@hydra.main('../../../config', 'config.yaml')
+@hydra.main("../../../config", "config.yaml")
 def main(cfg: DictConfig):
     cfg = cfg.wikidata
     random.seed(cfg)
 
     if cfg.preprocessing.refilter:
-        filter_triplets_by_relation(cfg.crawling.triplets_dir,
-                                    cfg.preprocessing.triplets_filtered_dir,
-                                    StanzaCallback(cfg.lang))
+        filter_triplets_by_relation(
+            cfg.crawling.triplets_dir, cfg.preprocessing.triplets_filtered_dir, StanzaCallback(cfg.lang)
+        )
 
     triplet_generator = TripletGenerator(cfg.preprocessing.triplets_filtered_dir, cfg.lang)
 
@@ -38,9 +38,9 @@ def main(cfg: DictConfig):
 
     # print(sum(callbacks[-1].scores) / len(callbacks[-1].scores))
 
-    with open(cfg.sentences_path, 'w') as fp:
+    with open(cfg.sentences_path, "w") as fp:
         json.dump(texts, fp, sort_keys=True, indent=4)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

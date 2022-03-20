@@ -13,11 +13,11 @@ def cleanup_hydra(func: Callable):
         try:
             return func(*args, **kwargs)
         finally:
-            log_file = Path(Path(sys.argv[0]).stem + '.log')
+            log_file = Path(Path(sys.argv[0]).stem + ".log")
             if log_file.exists():
                 log_file.unlink()
 
-            hydra_dir = Path('.hydra')
+            hydra_dir = Path(".hydra")
             if hydra_dir.exists():
                 shutil.rmtree(hydra_dir)
 

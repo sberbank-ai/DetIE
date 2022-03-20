@@ -1,11 +1,9 @@
 # coding: utf-8
 import torch
-from transformers import BatchEncoding
-from transformers import GPT2LMHeadModel, GPT2TokenizerFast
+from transformers import BatchEncoding, GPT2LMHeadModel, GPT2TokenizerFast
 
 
 class PretrainedLMScorer(object):
-
     def __init__(self, huggingface_model_id: str = "distilgpt2", stride: int = 4):
 
         self.model_id = huggingface_model_id
@@ -21,7 +19,7 @@ class PretrainedLMScorer(object):
 
     def eval(self, text: str):
 
-        self.encodings = self.tokenizer(text, return_tensors='pt')  # type: BatchEncoding
+        self.encodings = self.tokenizer(text, return_tensors="pt")  # type: BatchEncoding
         lls = []
         end_loc = 0
 
@@ -55,8 +53,14 @@ if __name__ == "__main__":
     import stanza
 
     # stanza.download('en')
-    nlp = stanza.Pipeline(lang='en', processors='tokenize,mwt,pos')
-    doc = nlp('is performance of')
-    print(*[f'word: {word.text}\tupos: {word.upos}\txpos: {word.xpos}\tfeats: {word.feats if word.feats else "_"}' for
-            sent in doc.sentences for word in sent.words], sep='\n')
+    nlp = stanza.Pipeline(lang="en", processors="tokenize,mwt,pos")
+    doc = nlp("is performance of")
+    print(
+        *[
+            f'word: {word.text}\tupos: {word.upos}\txpos: {word.xpos}\tfeats: {word.feats if word.feats else "_"}'
+            for sent in doc.sentences
+            for word in sent.words
+        ],
+        sep="\n",
+    )
     print()

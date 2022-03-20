@@ -1,4 +1,4 @@
-'''
+"""
 Usage:
    benchmark --gold=GOLD_OIE --out=OUTPUT_FILE ( --openiesix=OPENIE6 | --openiefive=OPENIE5 | --allennlp=ALLENNLP | --stanford=STANFORD_OIE | --ollie=OLLIE_OIE |--reverb=REVERB_OIE | --clausie=CLAUSIE_OIE | --openiefour=OPENIEFOUR_OIE | --props=PROPS_OIE | --tabbed=TABBED_OIE) [--exactMatch | --predMatch | --argMatch] [--error-file=ERROR_FILE] [--threshold=THRESHOLD] [--pickle_output=PICKLE_OUTPUT]
 
@@ -17,45 +17,50 @@ Options:
                                 sent, prob, pred,arg1, arg2, ...
   --allennlp=ALLENNLP_OIE      Read from allennlp output format
   --exactmatch                 Use exact match when judging whether an extraction is correct.
-'''
-import docopt
-import string
-import numpy as np
-from sklearn.metrics import precision_recall_curve
-from sklearn.metrics import auc
-import re
+"""
 import logging
 import pdb
-import ipdb
 import pickle
-logging.basicConfig(level = logging.INFO)
+import re
+import string
 
-from oie_readers.stanfordReader import StanfordReader
-from oie_readers.ollieReader import OllieReader
-from oie_readers.reVerbReader import ReVerbReader
-from oie_readers.clausieReader import ClausieReader
-from oie_readers.openieFourReader import OpenieFourReader
-from oie_readers.openieFiveReader import OpenieFiveReader
-from oie_readers.propsReader import PropSReader
-from oie_readers.tabReader import TabReader
-from oie_readers.allennlpReader import AllennlpReader
-# from oie_readers.rnnoieReader import RnnOIEReader
+import docopt
+import ipdb
+import numpy as np
+from sklearn.metrics import auc, precision_recall_curve
 
-from oie_readers.goldReader import GoldReader
-from matcher import Matcher
+logging.basicConfig(level=logging.INFO)
+
 from operator import itemgetter
 
+from matcher import Matcher
+from oie_readers.allennlpReader import AllennlpReader
+from oie_readers.clausieReader import ClausieReader
+from oie_readers.goldReader import GoldReader
+from oie_readers.ollieReader import OllieReader
+from oie_readers.openieFiveReader import OpenieFiveReader
+from oie_readers.openieFourReader import OpenieFourReader
+from oie_readers.propsReader import PropSReader
+from oie_readers.reVerbReader import ReVerbReader
+from oie_readers.stanfordReader import StanfordReader
+from oie_readers.tabReader import TabReader
+
+# from oie_readers.rnnoieReader import RnnOIEReader
+
+
+
 class Benchmark:
-    ''' Compare the gold OIE dataset against a predicted equivalent '''
+    """Compare the gold OIE dataset against a predicted equivalent"""
+
     def __init__(self, gold_fn):
-        ''' Load gold Open IE, this will serve to compare against using the compare function '''
+        """Load gold Open IE, this will serve to compare against using the compare function"""
         gr = GoldReader()
         gr.read(gold_fn)
         self.gold = gr.oie
 
-    def compare(self, predicted, matchingFunc, output_fn, error_file = None, pickle_output_fp=None):
-        ''' Compare gold against predicted using a specified matching function.
-            Outputs PR curve to output_fn '''
+    def compare(self, predicted, matchingFunc, output_fn, error_file=None, pickle_output_fp=None):
+        """Compare gold against predicted using a specified matching function.
+        Outputs PR curve to output_fn"""
 
         y_true = []
         y_scores = []
@@ -65,14 +70,14 @@ class Benchmark:
 
         correctTotal = 0
         unmatchedCount = 0
-        
+
         predicted = Benchmark.normalizeDict(predicted)
         gold = Benchmark.normalizeDict(self.gold)
-        
+
         pickle_output = {}
 
         for sent, item in gold.items():
-            goldExtractions, goldSent = item['extractions'], item['orig_sent']
+            goldExtractions, goldSent = item["extractions"], item["orig_sent"]
             sentence_y_true, sentence_y_scores = [], []
             sentence_unmatchedCount = 0
             if sent not in predicted:
@@ -83,22 +88,19 @@ class Benchmark:
                 correctTotal += len(goldExtractions)
                 continue
 
-            predictedExtractions, predictedSent = predicted[sent]['extractions'], predicted[sent]['orig_sent']
+            predictedExtractions, predictedSent = predicted[sent]["extractions"], predicted[sent]["orig_sent"]
             for goldEx in goldExtractions:
                 correctTotal += 1
                 found = False
 
-                #print goldEx.bow()
+                # print goldEx.bow()
                 for predictedEx in predictedExtractions:
                     if output_fn in predictedEx.matched:
                         # This predicted extraction was already matched against a gold extraction
                         # Don't allow to match it again
                         continue
 
-                    if matchingFunc(goldEx,
-                                    predictedEx,
-                                    ignoreStopwords = True,
-                                    ignoreCase = True):
+                    if matchingFunc(goldEx, predictedEx, ignoreStopwords=True, ignoreCase=True):
                         # print('***Matching***')
                         # print(goldEx.pred, goldEx.args)
                         # print(predictedEx.pred, predictedEx.args)
@@ -109,7 +111,7 @@ class Benchmark:
                         found = True
                         correct += 1
                         # print("Correct: ", predictedEx.confidence, predictedEx.bow())
-                        # print "Correct: ", '\t'.join([predictedEx.pred] + predictedEx.args) 
+                        # print "Correct: ", '\t'.join([predictedEx.pred] + predictedEx.args)
                         break
 
                 if not found:
@@ -122,18 +124,23 @@ class Benchmark:
             for predictedEx in [x for x in predictedExtractions if (output_fn not in x.matched)]:
                 # Add false positives
                 sentence_y_true.append(0)
-                incorrect+=1
+                incorrect += 1
                 # print("Incorrect: ",predictedEx.confidence, predictedEx.bow() )
-                # print "Incorrect", '\t'.join([predictedEx.pred] + predictedEx.args) 
+                # print "Incorrect", '\t'.join([predictedEx.pred] + predictedEx.args)
                 sentence_y_scores.append(predictedEx.confidence)
 
-            if(type(pickle_output) != type(None)):
+            if type(pickle_output) != type(None):
                 zero_conf_prec = sum(sentence_y_true) / len(predictedExtractions)
                 zero_conf_recall = sum(sentence_y_true) / len(goldExtractions)
 
-                (sentence_precision, sentence_recall, confidence_thresholds), optimal = Benchmark.prCurve(sentence_y_true.copy(), sentence_y_scores.copy(),
-                                            recallMultiplier = ((len(goldExtractions) - sentence_unmatchedCount + 1)/float(len(goldExtractions))),
-                                            sentence_level = True)
+                (sentence_precision, sentence_recall, confidence_thresholds), optimal = Benchmark.prCurve(
+                    sentence_y_true.copy(),
+                    sentence_y_scores.copy(),
+                    recallMultiplier=(
+                        (len(goldExtractions) - sentence_unmatchedCount + 1) / float(len(goldExtractions))
+                    ),
+                    sentence_level=True,
+                )
                 sentence_precision = sentence_precision[:-1]
                 sentence_recall = sentence_recall[:-1]
 
@@ -141,7 +148,7 @@ class Benchmark:
                 # Some systems have same scores for multiple extractions and sklearn computes precision and recall only for the unqiue scores
                 # Fill in the values for duplicated scores
                 num_predictions = len(sentence_y_scores)
-                if(len(sentence_precision) < num_predictions):
+                if len(sentence_precision) < num_predictions:
                     sorted_y_scores = sorted(sentence_y_scores)
                     # Ensure that they are sorted in the same order - assuming increasing
                     assert sorted_y_scores[0] == confidence_thresholds[0]
@@ -159,30 +166,49 @@ class Benchmark:
                     sentence_precision = sentence_precision_rep
                     sentence_recall = sentence_recall_rep
 
-                assert(len(sentence_precision) == len(sentence_y_true)), ipdb.set_trace()
+                assert len(sentence_precision) == len(sentence_y_true), ipdb.set_trace()
 
                 # sorting p,r in ordering of decreasing confidence viz increasing recall
                 sortedIndices = np.argsort(sentence_recall)
                 sentence_precision = list(sentence_precision[sortedIndices])
                 sentence_recall = list(sentence_recall[sortedIndices])
-                predictedExtractions = sorted(predictedExtractions, key = lambda x: x.confidence , reverse = True)
+                predictedExtractions = sorted(predictedExtractions, key=lambda x: x.confidence, reverse=True)
 
-                gold_extractions = ['('+ goldExtractions[i].args[0] + ';' + goldExtractions[i].pred + ';' + ";".join(goldExtractions[i].args[1:]) + ')' for i in range(len(goldExtractions))] 
-                pred_extractions = ['('+ predictedExtractions[i].args[0] + ';' + predictedExtractions[i].pred + ';' + ";".join(predictedExtractions[i].args[1:]) + ')' for i in range(len(predictedExtractions)) ] #if predictedExtractions[i].confidence >= optimal[3]]
+                gold_extractions = [
+                    "("
+                    + goldExtractions[i].args[0]
+                    + ";"
+                    + goldExtractions[i].pred
+                    + ";"
+                    + ";".join(goldExtractions[i].args[1:])
+                    + ")"
+                    for i in range(len(goldExtractions))
+                ]
+                pred_extractions = [
+                    "("
+                    + predictedExtractions[i].args[0]
+                    + ";"
+                    + predictedExtractions[i].pred
+                    + ";"
+                    + ";".join(predictedExtractions[i].args[1:])
+                    + ")"
+                    for i in range(len(predictedExtractions))
+                ]  # if predictedExtractions[i].confidence >= optimal[3]]
 
-                pickle_output[goldSent] = {'gold':gold_extractions ,
-                                     'pred':pred_extractions,
-                                     'precisions':sentence_precision,
-                                     'recalls':sentence_recall,
-                                     'max_f1_score':optimal,
-                                     'zero_conf_score':(round(zero_conf_prec,4), round(zero_conf_recall,4))
-                                     }
+                pickle_output[goldSent] = {
+                    "gold": gold_extractions,
+                    "pred": pred_extractions,
+                    "precisions": sentence_precision,
+                    "recalls": sentence_recall,
+                    "max_f1_score": optimal,
+                    "zero_conf_score": (round(zero_conf_prec, 4), round(zero_conf_recall, 4)),
+                }
 
             y_true += sentence_y_true
             y_scores += sentence_y_scores
 
-        if(type(pickle_output_fp) != type(None) ):
-            pickle.dump(pickle_output, open(pickle_output_fp, 'wb'))
+        if type(pickle_output_fp) != type(None):
+            pickle.dump(pickle_output, open(pickle_output_fp, "wb"))
 
         y_true = y_true
         y_scores = y_scores
@@ -194,48 +220,45 @@ class Benchmark:
         # recall on y_true, y  (r')_scores computes |covered by extractor| / |True in what's covered by extractor|
         # to get to true recall we do:
         # r' * (|True in what's covered by extractor| / |True in gold|) = |true in what's covered| / |true in gold|
-        (p, r, confidence_thresholds), optimal = Benchmark.prCurve(np.array(y_true), np.array(y_scores),
-                                            recallMultiplier = ((correctTotal - unmatchedCount)/float(correctTotal)))
+        (p, r, confidence_thresholds), optimal = Benchmark.prCurve(
+            np.array(y_true),
+            np.array(y_scores),
+            recallMultiplier=((correctTotal - unmatchedCount) / float(correctTotal)),
+        )
         # logging.info("AUC: {} Optimal (Pr, Re, F1, thr): {}".format(auc(r, p), optimal))
         print("AUC: {} Optimal (Pr, Re, F1, thr): {}".format(auc(r, p), optimal))
         # Write error log to file
         if error_file:
-            logging.info("Writing {} error indices to {}".format(len(errors),
-                                                                 error_file))
-            with open(error_file, 'w') as fout:
-                fout.write('\n'.join([str(error)
-                                     for error
-                                      in errors]) + '\n')
+            logging.info("Writing {} error indices to {}".format(len(errors), error_file))
+            with open(error_file, "w") as fout:
+                fout.write("\n".join([str(error) for error in errors]) + "\n")
 
         # write PR to file
-        with open(output_fn, 'w') as fout:
-            fout.write('{0}\t{1}\n'.format("Precision", "Recall"))
+        with open(output_fn, "w") as fout:
+            fout.write("{0}\t{1}\n".format("Precision", "Recall"))
             # for cur_p, cur_r in sorted(zip(p, r), key = lambda (cur_p, cur_r): cur_r):
-            for cur_p, cur_r in sorted(zip(p, r), key = lambda cur: cur[1]):
-                fout.write('{0}\t{1}\n'.format(cur_p, cur_r))
+            for cur_p, cur_r in sorted(zip(p, r), key=lambda cur: cur[1]):
+                fout.write("{0}\t{1}\n".format(cur_p, cur_r))
 
     @staticmethod
-    def prCurve(y_true, y_scores, recallMultiplier, sentence_level = False):
+    def prCurve(y_true, y_scores, recallMultiplier, sentence_level=False):
         # Recall multiplier - accounts for the percentage examples unreached
         # Return (precision [list], recall[list]), (Optimal F1, Optimal threshold)
 
-        # if this function is called at the sentence level, append a dummy point to y_true and y_scores so that precision and recall is calculated for all the confidence thresholds 
-        if(sentence_level):
+        # if this function is called at the sentence level, append a dummy point to y_true and y_scores so that precision and recall is calculated for all the confidence thresholds
+        if sentence_level:
             y_true.append(1)
             y_true = np.array(y_true)
             y_scores.append(-1e32)
             y_scores = np.array(y_scores)
 
-        y_scores = [score \
-                    if not (np.isnan(score) or (not np.isfinite(score))) \
-                    else 0
-                    for score in y_scores]
-        
+        y_scores = [score if not (np.isnan(score) or (not np.isfinite(score))) else 0 for score in y_scores]
+
         precision_ls, recall_ls, thresholds = precision_recall_curve(y_true, y_scores)
         recall_ls = recall_ls * recallMultiplier
 
         # removing the added point so that it does not affect the calculation of max_f1_confidence
-        if(sentence_level):
+        if sentence_level:
             y_true = y_true[:-1]
             y_scores = y_scores[:-1]
             # removing the p=1,r=0 point from one end and the point that we introduced from the other end
@@ -243,27 +266,27 @@ class Benchmark:
             recall_ls = recall_ls[1:]
             thresholds = thresholds[1:]
 
-        optimal = max([(precision, recall, f_beta(precision, recall, beta = 1), threshold)
-                       for ((precision, recall), threshold)
-                       in zip(zip(precision_ls[:-1], recall_ls[:-1]),
-                              thresholds)],
-                      key = itemgetter(2))  # Sort by f1 score
+        optimal = max(
+            [
+                (precision, recall, f_beta(precision, recall, beta=1), threshold)
+                for ((precision, recall), threshold) in zip(zip(precision_ls[:-1], recall_ls[:-1]), thresholds)
+            ],
+            key=itemgetter(2),
+        )  # Sort by f1 score
 
-        return ((precision_ls, recall_ls, thresholds),
-                optimal)
+        return ((precision_ls, recall_ls, thresholds), optimal)
 
     # Helper functions:
     @staticmethod
     def normalizeDict(d):
-        return dict([(Benchmark.normalizeKey(k).lower(), {'orig_sent': k, 'extractions': v}) for k, v in d.items()])
+        return dict([(Benchmark.normalizeKey(k).lower(), {"orig_sent": k, "extractions": v}) for k, v in d.items()])
 
     @staticmethod
     def normalizeKey(k):
         # return Benchmark.removePunct(unicode(Benchmark.PTB_unescape(k.replace(' ','')), errors = 'ignore'))
-        return Benchmark.removePunct(Benchmark.PTB_unescape(k.replace(' ','')))
+        return Benchmark.removePunct(Benchmark.PTB_unescape(k.replace(" ", "")))
         # return Benchmark.removePunct(Benchmark.PTB_unescape(k))
         # return k
-
 
     @staticmethod
     def PTB_escape(s):
@@ -279,102 +302,103 @@ class Benchmark:
 
     @staticmethod
     def removePunct(s):
-        return Benchmark.regex.sub('', s)
+        return Benchmark.regex.sub("", s)
 
     # CONSTANTS
-    regex = re.compile('[%s]' % re.escape(string.punctuation))
+    regex = re.compile("[%s]" % re.escape(string.punctuation))
 
     # Penn treebank bracket escapes
     # Taken from: https://github.com/nlplab/brat/blob/master/server/src/gtbtokenize.py
-    PTB_ESCAPES = [('(', '-LRB-'),
-                   (')', '-RRB-'),
-                   ('[', '-LSB-'),
-                   (']', '-RSB-'),
-                   ('{', '-LCB-'),
-                   ('}', '-RCB-'),]
+    PTB_ESCAPES = [
+        ("(", "-LRB-"),
+        (")", "-RRB-"),
+        ("[", "-LSB-"),
+        ("]", "-RSB-"),
+        ("{", "-LCB-"),
+        ("}", "-RCB-"),
+    ]
 
 
-def f_beta(precision, recall, beta = 1):
+def f_beta(precision, recall, beta=1):
     """
     Get F_beta score from precision and recall.
     """
-    beta = float(beta) # Make sure that results are in float
+    beta = float(beta)  # Make sure that results are in float
     return (1 + pow(beta, 2)) * (precision * recall) / ((pow(beta, 2) * precision) + recall)
 
 
-f1 = lambda precision, recall: f_beta(precision, recall, beta = 1)
+f1 = lambda precision, recall: f_beta(precision, recall, beta=1)
 
 
-
-
-if __name__ == '__main__':
+if __name__ == "__main__":
     args = docopt.docopt(__doc__)
     logging.debug(args)
 
-    if(args['--threshold']):
-        threshold = float(args['--threshold'])
+    if args["--threshold"]:
+        threshold = float(args["--threshold"])
     else:
         threshold = None
 
-    if args['--stanford']:
+    if args["--stanford"]:
         predicted = StanfordReader()
-        predicted.read(args['--stanford'])
+        predicted.read(args["--stanford"])
 
-    if args['--props']:
+    if args["--props"]:
         predicted = PropSReader()
-        predicted.read(args['--props'])
+        predicted.read(args["--props"])
 
-    if args['--ollie']:
+    if args["--ollie"]:
         predicted = OllieReader()
-        predicted.read(args['--ollie'])
+        predicted.read(args["--ollie"])
 
-    if args['--reverb']:
+    if args["--reverb"]:
         predicted = ReVerbReader()
-        predicted.read(args['--reverb'])
+        predicted.read(args["--reverb"])
 
-    if args['--clausie']:
+    if args["--clausie"]:
         predicted = ClausieReader(threshold=threshold)
-        predicted.read(args['--clausie'])
+        predicted.read(args["--clausie"])
 
-    if args['--openiefour']:
+    if args["--openiefour"]:
         predicted = OpenieFourReader()
-        predicted.read(args['--openiefour'])
+        predicted.read(args["--openiefour"])
 
-    if args['--openiefive']:
+    if args["--openiefive"]:
         predicted = OpenieFiveReader(threshold=threshold)
-        predicted.read(args['--openiefive'])
+        predicted.read(args["--openiefive"])
 
-    if args['--tabbed']:
+    if args["--tabbed"]:
         predicted = TabReader()
-        predicted.read(args['--tabbed'])
- 
-    if args['--allennlp']:
+        predicted.read(args["--tabbed"])
+
+    if args["--allennlp"]:
         predicted = AllennlpReader(threshold=threshold)
-        predicted.read(args['--allennlp'])
+        predicted.read(args["--allennlp"])
 
     # if args['--rnnoie']:
     #     predicted = RnnOIEReader(threshold=threshold)
     #     predicted.read(args['--rnnoie'])
 
-
-    if args['--exactMatch']:
+    if args["--exactMatch"]:
         matchingFunc = Matcher.argMatch
 
-    elif args['--predMatch']:
+    elif args["--predMatch"]:
         matchingFunc = Matcher.predMatch
 
-    elif args['--argMatch']:
+    elif args["--argMatch"]:
         matchingFunc = Matcher.argMatch
 
     else:
         matchingFunc = Matcher.lexicalMatch
 
-    b = Benchmark(args['--gold'])
-    out_filename = args['--out']
+    b = Benchmark(args["--gold"])
+    out_filename = args["--out"]
 
     # logging.info("Writing PR curve of {} to {}".format(predicted.name, out_filename))
-    b.compare(predicted = predicted.oie,
-              matchingFunc = matchingFunc,
-              output_fn = out_filename,
-              error_file = args["--error-file"],
-              pickle_output_fp=args['--pickle_output'])
+    b.compare(
+        predicted=predicted.oie,
+        matchingFunc=matchingFunc,
+        output_fn=out_filename,
+        error_file=args["--error-file"],
+        pickle_output_fp=args["--pickle_output"],
+    )

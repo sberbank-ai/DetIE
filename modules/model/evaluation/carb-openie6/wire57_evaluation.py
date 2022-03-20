@@ -1,9 +1,10 @@
-import ipdb
+import argparse
 import json
 import re
-import argparse
 
-CARB_TEST_FILE = 'carb/data/dev_gold_allennlp_format.txt'
+import ipdb
+
+CARB_TEST_FILE = "carb/data/dev_gold_allennlp_format.txt"
 
 
 def load_WiRe_annotations():
@@ -13,14 +14,14 @@ def load_WiRe_annotations():
 
 
 def get_extraction_wire57(arg1, rel, arg2):
-    return {'arg1': arg1, 'rel': rel, 'arg2': arg2}
+    return {"arg1": arg1, "rel": rel, "arg2": arg2}
 
 
 def get_extraction_wire57_gold(arg1, rel, arg2):
     extraction = {}
-    extraction['arg1'] = {'text': arg1, 'words': arg1.split()}
-    extraction['rel'] = {'text': rel, 'words': rel.split()}
-    extraction['arg2'] = {'text': arg2, 'words': arg2.split()}
+    extraction["arg1"] = {"text": arg1, "words": arg1.split()}
+    extraction["rel"] = {"text": rel, "words": rel.split()}
+    extraction["arg2"] = {"text": arg2, "words": arg2.split()}
     return extraction
 
 
@@ -29,15 +30,15 @@ def get_allenlp_args(line):
     assert len(re.findall("<rel>.*</rel>", line)) == 1
     assert len(re.findall("<arg2>.*</arg2>", line)) == 1
 
-    arg1 = re.findall("<arg1>.*</arg1>", line)[0].strip('<arg1>').strip('</arg1>').strip()
-    rel = re.findall("<rel>.*</rel>", line)[0].strip('<rel>').strip('</rel>').strip()
-    arg2 = re.findall("<arg2>.*</arg2>", line)[0].strip('<arg2>').strip('</arg2>').strip()
+    arg1 = re.findall("<arg1>.*</arg1>", line)[0].strip("<arg1>").strip("</arg1>").strip()
+    rel = re.findall("<rel>.*</rel>", line)[0].strip("<rel>").strip("</rel>").strip()
+    arg2 = re.findall("<arg2>.*</arg2>", line)[0].strip("<arg2>").strip("</arg2>").strip()
 
     return arg1, rel, arg2
 
 
 def process_allennlp_format(file, gold=False):
-    with open(file, 'r') as f:
+    with open(file, "r") as f:
         lines = f.readlines()
 
     extractions = {}
@@ -45,7 +46,7 @@ def process_allennlp_format(file, gold=False):
     current_sentence = None
     for l in lines:
         if len(l.strip()) > 0:
-            items = l.strip().split('\t')
+            items = l.strip().split("\t")
             assert len(items) == 3
             if current_sentence != items[0]:
                 current_sentence = items[0]
@@ -69,12 +70,13 @@ def main(arguments):
     report = ""
     metrics, raw_match_scores = eval_system(gold, predictions_by_OIE)
 
-    prec, rec = metrics['precision'], metrics['recall']
+    prec, rec = metrics["precision"], metrics["recall"]
     f1_score = f1(prec, rec)
 
-    report += ("prec/rec/f1: {:.1%} {:.1%} {:.3f}".format(prec, rec, f1_score))
+    report += "prec/rec/f1: {:.1%} {:.1%} {:.3f}".format(prec, rec, f1_score)
 
     print(report)
+
 
 def eval_system(gold, predictions):
     results = {}
@@ -88,14 +90,14 @@ def eval_system(gold, predictions):
     rec_num, rec_denom = 0, 0
 
     for s in results.values():
-        prec_num += s['precision'][0]
-        prec_denom += s['precision'][1]
-        rec_num += s['recall'][0]
-        rec_denom += s['recall'][1]
+        prec_num += s["precision"][0]
+        prec_denom += s["precision"][1]
+        rec_num += s["recall"][0]
+        rec_denom += s["recall"][1]
 
     metrics = {
-        'precision': prec_num / prec_denom,
-        'recall': rec_num / rec_denom,
+        "precision": prec_num / prec_denom,
+        "recall": rec_num / rec_denom,
     }
     raw_match_scores = None
     return metrics, raw_match_scores
@@ -120,7 +122,7 @@ def f1(prec, rec):
 
 def sentence_match(gold, predicted):
     """For a given sentence, compute tuple-tuple matching scores, and gather them
-at the sentence level. Return scoring metrics."""
+    at the sentence level. Return scoring metrics."""
     score, maximum_score = 0, len(gold)
     exact_match_scores = [[None for _ in predicted] for __ in gold]
     scores = [[None for _ in predicted] for __ in gold]
@@ -165,11 +167,12 @@ def aggregate_scores_greedily(scores):
     rec_scores = [scores[i][j][1] for i, j in matches]
     total_prec = sum(prec_scores)
     total_rec = sum(rec_scores)
-    scoring_metrics = {"precision": [total_prec, len(scores[0])],
-                       "recall": [total_rec, len(scores)],
-                       "precision_of_matches": prec_scores,
-                       "recall_of_matches": rec_scores
-                       }
+    scoring_metrics = {
+        "precision": [total_prec, len(scores[0])],
+        "recall": [total_rec, len(scores)],
+        "precision_of_matches": prec_scores,
+        "recall_of_matches": rec_scores,
+    }
     # print(scoring_metrics)
     return scoring_metrics
 
@@ -182,30 +185,31 @@ def aggregate_exact_matches(match_matrix):
     if len(match_matrix[0]) == 0:
         precision = [0, 0]  # N/A
     else:
-        precision = [sum([any([g[i] for g in match_matrix]) for i in range(len(match_matrix[0]))], 0),
-                     len(match_matrix[0])]
+        precision = [
+            sum([any([g[i] for g in match_matrix]) for i in range(len(match_matrix[0]))], 0),
+            len(match_matrix[0]),
+        ]
     # f1 = 2 * precision * recall / (precision + recall)
-    metrics = {'precision': precision,
-               'recall': recall}
+    metrics = {"precision": precision, "recall": recall}
     return metrics
 
 
 def part_to_string(p):
-    return " ".join(p['words'])
+    return " ".join(p["words"])
 
 
 def gold_to_text(gt):
-    text = " ; ".join([part_to_string(gt['arg1']), part_to_string(gt['rel']), part_to_string(gt['arg2'])])
-    if gt['arg3+']:
-        text += " ; " + " ; ".join(gt['arg3+'])
+    text = " ; ".join([part_to_string(gt["arg1"]), part_to_string(gt["rel"]), part_to_string(gt["arg2"])])
+    if gt["arg3+"]:
+        text += " ; " + " ; ".join(gt["arg3+"])
     return text
 
 
 def tuple_exact_match(t, gt):
     """Without resolving coref and WITH the need to hallucinate humanly infered
-words, does the tuple match the reference ? Returns a boolean."""
-    for part in ['arg1', 'rel', 'arg2']:
-        if not t[part] == ' '.join(gt[part]['words']):
+    words, does the tuple match the reference ? Returns a boolean."""
+    for part in ["arg1", "rel", "arg2"]:
+        if not t[part] == " ".join(gt[part]["words"]):
             # This purposedly ignores that some of the gt words are 'inf'
             # print("Predicted '{}' is different from reference '{}'".format(t[part], ' '.join(gt[part]['words'])))
             return False
@@ -226,14 +230,14 @@ t = {"attrib/spec?" : attrib,
 
 def tuple_match(t, gt):
     """t is a predicted tuple, gt is the gold tuple. How well do they match ?
-Yields precision and recall scores, a pair of non-zero values, if it's a match, and False if it's not.
+    Yields precision and recall scores, a pair of non-zero values, if it's a match, and False if it's not.
     """
     precision = [0, 0]  # 0 out of 0 predicted words match
     recall = [0, 0]  # 0 out of 0 reference words match
     # If, for each part, any word is the same as a reference word, then it's a match.
-    for part in ['arg1', 'rel', 'arg2']:
+    for part in ["arg1", "rel", "arg2"]:
         predicted_words = t[part].split()
-        gold_words = gt[part]['words']
+        gold_words = gt[part]["words"]
         if not predicted_words:
             if gold_words:
                 return False
@@ -260,8 +264,7 @@ Yields precision and recall scores, a pair of non-zero values, if it's a match, 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument('--gold', help="file path for gold in allennlp format", required=True)
-    parser.add_argument('--system', help="file path for system in allennlp format", required=True)
+    parser.add_argument("--gold", help="file path for gold in allennlp format", required=True)
+    parser.add_argument("--system", help="file path for system in allennlp format", required=True)
     arguments = parser.parse_args()
     main(arguments)
-

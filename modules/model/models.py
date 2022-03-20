@@ -1,28 +1,27 @@
 # coding: utf-8
 import io
-import stanza
-import torch
-import pytorch_lightning as pl
-
-from torch import nn
 from collections import OrderedDict
 from typing import List, Optional
 
+import pytorch_lightning as pl
+import stanza
+import torch
 from lapsolver import solve_dense
+from nltk.tokenize.treebank import TreebankWordDetokenizer
 from omegaconf import DictConfig
 from sklearn.metrics import f1_score, precision_score, recall_score
-from nltk.tokenize.treebank import TreebankWordDetokenizer
-from transformers import AutoTokenizer, BertModel, AutoModelForMaskedLM
+from torch import nn
+from transformers import AutoModelForMaskedLM, AutoTokenizer, BertModel
 
-from .apply import prediction2triples, pprint_triplets, postprocess_adp
-from .dataloaders import SyntaxFeatures
-from .dataloaders import make_syntax_features
+from .apply import postprocess_adp, pprint_triplets, prediction2triples
+from .dataloaders import SyntaxFeatures, make_syntax_features
 from .feature_preparation import syntax_based_features_for_bpe
-from .tags import UPOS_TAGS_ALL, UD_DEPREL
+from .tags import UD_DEPREL, UPOS_TAGS_ALL
 
 
 class TransposeLayer(nn.Module):
-    """ A helper class for transposing the tensor """
+    """A helper class for transposing the tensor"""
+
     def __init__(self, *args):
         super().__init__()
         self.args = args
@@ -32,7 +31,7 @@ class TransposeLayer(nn.Module):
 
 
 class TripletsExtractor(pl.LightningModule):
-    """ Base class for all single-shot models extracting multiple triplets """
+    """Base class for all single-shot models extracting multiple triplets"""
 
     def __init__(self, model_cfg: DictConfig, opt_cfg: DictConfig, scheduler_cfg: DictConfig):
         super().__init__()
@@ -50,7 +49,8 @@ class TripletsExtractor(pl.LightningModule):
 
         self.tokenizer = AutoTokenizer.from_pretrained(model_cfg.tokenizer, cache_dir=model_cfg.cache_dir)
         self.pretrained_encoder = AutoModelForMaskedLM.from_pretrained(
-            model_cfg.pretrained_encoder, cache_dir=model_cfg.cache_dir).base_model
+            model_cfg.pretrained_encoder, cache_dir=model_cfg.cache_dir
+        ).base_model
         # self.pretrained_encoder = BertModel.from_pretrained(
         #     model_cfg.pretrained_encoder, cache_dir=model_cfg.cache_dir).base_model
         # self.tokenizer = BertTokenizerFast.from_pretrained(model_cfg.tokenizer,
@@ -74,8 +74,7 @@ class TripletsExtractor(pl.LightningModule):
             nn.LayerNorm(hid_size),
             TransposeLayer(0, 1),
             nn.TransformerEncoder(
-                nn.TransformerEncoderLayer(hid_size, model_cfg.n_classes, hid_size),
-                num_layers=model_cfg.num_layers
+                nn.TransformerEncoderLayer(hid_size, model_cfg.n_classes, hid_size), num_layers=model_cfg.num_layers
             ),
             TransposeLayer(0, 1),
             nn.ReLU(),
@@ -83,24 +82,28 @@ class TripletsExtractor(pl.LightningModule):
         )
 
         self.compute_crossentropy_with_logits = nn.CrossEntropyLoss(
-            weight=torch.tensor(list(model_cfg.class_weights), dtype=torch.float), reduction='none')
+            weight=torch.tensor(list(model_cfg.class_weights), dtype=torch.float), reduction="none"
+        )
 
         name, opt_cfg = opt_cfg.name, dict(opt_cfg)
-        del opt_cfg['name']
+        del opt_cfg["name"]
         self.opt = getattr(torch.optim, name)(self.parameters(), **opt_cfg)
 
         name, scheduler_cfg = scheduler_cfg.name, dict(scheduler_cfg)
-        del scheduler_cfg['name']
+        del scheduler_cfg["name"]
         self.scheduler = getattr(torch.optim.lr_scheduler, name)(self.opt, **scheduler_cfg)
 
         self.metrics = {}
-        for stage in ('train', 'val', 'test'):
-            self.metrics[self.get_metric_name('f1_score', stage)] = \
-                pl.metrics.classification.f_beta.F1(model_cfg.n_classes, average='macro')
-            self.metrics[self.get_metric_name('precision', stage)] = \
-                pl.metrics.classification.precision_recall.Precision(model_cfg.n_classes, average='macro')
-            self.metrics[self.get_metric_name('recall', stage)] = \
-                pl.metrics.classification.precision_recall.Recall(model_cfg.n_classes, average='macro')
+        for stage in ("train", "val", "test"):
+            self.metrics[self.get_metric_name("f1_score", stage)] = pl.metrics.classification.f_beta.F1(
+                model_cfg.n_classes, average="macro"
+            )
+            self.metrics[
+                self.get_metric_name("precision", stage)
+            ] = pl.metrics.classification.precision_recall.Precision(model_cfg.n_classes, average="macro")
+            self.metrics[self.get_metric_name("recall", stage)] = pl.metrics.classification.precision_recall.Recall(
+                model_cfg.n_classes, average="macro"
+            )
 
     def init_tools(self, cache_dir: str = None):
 
@@ -112,13 +115,13 @@ class TripletsExtractor(pl.LightningModule):
                 cache_dir = self.model_cfg.cache_dir
 
             stanza.download(self.lang, model_dir=cache_dir)
-            self.stanza_pipeline = stanza.Pipeline(lang=self.lang, processors='tokenize,mwt,pos', dir=cache_dir)
+            self.stanza_pipeline = stanza.Pipeline(lang=self.lang, processors="tokenize,mwt,pos", dir=cache_dir)
 
     @staticmethod
-    def get_metric_name(name, stage, tag: str = ''):
+    def get_metric_name(name, stage, tag: str = ""):
         if not tag:
-            return f'{stage}_{name}'
-        return f'{stage}_{name}_{tag}'
+            return f"{stage}_{name}"
+        return f"{stage}_{name}_{tag}"
 
     def _get_stage_metrics(self, stage):
         return {key: value for key, value in self.metrics.items() if key.startswith(stage)}
@@ -140,7 +143,8 @@ class TripletsExtractor(pl.LightningModule):
 
         batch_size, seq_len, *_ = logits.shape
         logits = logits.view(
-            *logits.shape[:-1], -1, self.model_cfg.n_classes)  # [batch_size, seq_len, num_detections, n_classes]
+            *logits.shape[:-1], -1, self.model_cfg.n_classes
+        )  # [batch_size, seq_len, num_detections, n_classes]
 
         # detection_conf = torch.sigmoid(logits[:, 0, :, :1])  # [batch_size, seq_len, num_detections]
         # mask = torch.any(detection_probas > self.model_cfg.min_detection_thresh, dim=1, keepdim=True)
@@ -157,7 +161,7 @@ class TripletsExtractor(pl.LightningModule):
             self.eval()
 
         if self.model_cfg.join_is:
-            texts = [text + ' [is] [of] [from]' for text in texts]
+            texts = [text + " [is] [of] [from]" for text in texts]
 
         tokenized = self.tokenizer(
             texts,
@@ -166,16 +170,18 @@ class TripletsExtractor(pl.LightningModule):
             return_offsets_mapping=True,
             # added June 3rd for running on Russian
             truncation=True,
-            max_length=self.model_cfg.hid_size
+            max_length=self.model_cfg.hid_size,
         ).to(self.device)
 
         syntax_features = None
         if self.use_syntax_features:
             batch = [
-                list(map(
-                    lambda items: [item if item is not None else 0 for item in items],
-                    syntax_based_features_for_bpe(text, self.stanza_pipeline, self.tokenizer)
-                ))
+                list(
+                    map(
+                        lambda items: [item if item is not None else 0 for item in items],
+                        syntax_based_features_for_bpe(text, self.stanza_pipeline, self.tokenizer),
+                    )
+                )
                 for text in texts
             ]
             syntax_features = make_syntax_features(*zip(*batch), device=self.device)
@@ -204,11 +210,7 @@ class TripletsExtractor(pl.LightningModule):
 
     @staticmethod
     def _match_logits_with_labels(
-            logits: torch.Tensor,
-            labels: torch.Tensor,
-            matching: str = 'iou',
-            disable_bg: bool = True,
-            eps: float = 1e-8
+        logits: torch.Tensor, labels: torch.Tensor, matching: str = "iou", disable_bg: bool = True, eps: float = 1e-8
     ):
         """
             Using the magic of ops research to assign the best labeling
@@ -228,16 +230,16 @@ class TripletsExtractor(pl.LightningModule):
 
         # m -- how many detectors we decided to have
         # n -- how many actual relations we are supposed to extract
-        intersection = torch.einsum('ijmk,ijnk->imn', detached_probas, effective_labels.to(torch.float))
+        intersection = torch.einsum("ijmk,ijnk->imn", detached_probas, effective_labels.to(torch.float))
         sum_probas = torch.sum(detached_probas, dim=(1, -1)).unsqueeze(-1)
         sum_labels = torch.sum(effective_labels, dim=(1, -1)).unsqueeze(-2)
-        if matching == 'iou':
+        if matching == "iou":
             # Inclusion–exclusion principle
             union = sum_probas + sum_labels - intersection
-        elif matching == 'dice':
+        elif matching == "dice":
             union = sum_probas + sum_labels
-        elif matching == 'dice_squared':
-            sum_probas = torch.sum(detached_probas ** 2, dim=(1, -1)).unsqueeze(-1)
+        elif matching == "dice_squared":
+            sum_probas = torch.sum(detached_probas**2, dim=(1, -1)).unsqueeze(-1)
             union = sum_probas + sum_labels
         else:
             raise NotImplementedError
@@ -256,14 +258,15 @@ class TripletsExtractor(pl.LightningModule):
         return logits, matched_labels, sum(batch_iou) / len(batch_iou)
 
     def compute_loss(self, batch, calc_metrics=True, stage=None):
-        encoder_inputs, labels_one_hot, syntax_features = batch  # y.shape == [batch_size, seq_len, n_relations, n_classes]
+        (
+            encoder_inputs,
+            labels_one_hot,
+            syntax_features,
+        ) = batch  # y.shape == [batch_size, seq_len, n_relations, n_classes]
         logits = self.forward(encoder_inputs, syntax_features)
 
         matched_logits, matched_labels_one_hot, avg_iou = self._match_logits_with_labels(
-            logits,
-            labels_one_hot,
-            matching=self.model_cfg.matching,
-            disable_bg=self.model_cfg.disable_bg
+            logits, labels_one_hot, matching=self.model_cfg.matching, disable_bg=self.model_cfg.disable_bg
         )
         if self.model_cfg.focal_gamma != 0:
             matched_probas = torch.softmax(matched_logits, -1).max(-1)[0].view(-1)
@@ -279,8 +282,8 @@ class TripletsExtractor(pl.LightningModule):
         if calc_metrics:
             assert stage
 
-            metrics[self.get_metric_name('loss', stage)] = loss.item()
-            metrics[self.get_metric_name('avg_iou', stage)] = avg_iou.item()
+            metrics[self.get_metric_name("loss", stage)] = loss.item()
+            metrics[self.get_metric_name("avg_iou", stage)] = avg_iou.item()
 
             matched_preds = matched_logits.argmax(-1)
             # metrics['f1_score'] = f1_score(matched_labels, matched_logits, average='macro')
@@ -293,10 +296,10 @@ class TripletsExtractor(pl.LightningModule):
             # Class-wise metrics
             matched_labels, matched_preds = map(lambda x: x.cpu().numpy(), (matched_labels, matched_preds))
             for class_name, f1, precision, recall in zip(
-                    ('none', 'source', 'relation', 'target'),
-                    f1_score(matched_labels, matched_preds, average=None),
-                    precision_score(matched_labels, matched_preds, average=None),
-                    recall_score(matched_labels, matched_preds, average=None),
+                ("none", "source", "relation", "target"),
+                f1_score(matched_labels, matched_preds, average=None),
+                precision_score(matched_labels, matched_preds, average=None),
+                recall_score(matched_labels, matched_preds, average=None),
             ):
                 # labels_class_mask = matched_labels == class_id
                 # total_predicted_class = (matched_logits == class_id).sum()
@@ -305,9 +308,9 @@ class TripletsExtractor(pl.LightningModule):
                 # intersection = (matched_labels == matched_logits).sum()
                 # # metrics[f'{class_name}_iou'] =  / (matched_logits)
 
-                metrics[self.get_metric_name(f'{class_name}_f1_score', stage)] = f1
-                metrics[self.get_metric_name(f'{class_name}_precision_score', stage)] = precision
-                metrics[self.get_metric_name(f'{class_name}_recall_score', stage)] = recall
+                metrics[self.get_metric_name(f"{class_name}_f1_score", stage)] = f1
+                metrics[self.get_metric_name(f"{class_name}_precision_score", stage)] = precision
+                metrics[self.get_metric_name(f"{class_name}_recall_score", stage)] = recall
 
         return logits, loss, metrics
 
@@ -319,53 +322,55 @@ class TripletsExtractor(pl.LightningModule):
     def on_epoch_start(self):
         if self.current_epoch == self.model_cfg.unfreeze_epoch:
             n_layers = len(self.pretrained_encoder.encoder.layer)
-            print(f'Unfreezing layers starting after {n_layers - self.model_cfg.unfreeze_layers_from_top} '
-                  f'of {n_layers} on epoch {self.current_epoch}')
-            for layer in self.pretrained_encoder.encoder.layer[n_layers - self.model_cfg.unfreeze_layers_from_top:]:
+            print(
+                f"Unfreezing layers starting after {n_layers - self.model_cfg.unfreeze_layers_from_top} "
+                f"of {n_layers} on epoch {self.current_epoch}"
+            )
+            for layer in self.pretrained_encoder.encoder.layer[n_layers - self.model_cfg.unfreeze_layers_from_top :]:
                 self._set_req_grad(layer, True)
 
     def on_fit_start(self):
         pl.seed_everything(self.seed)
         self._set_req_grad(self.pretrained_encoder, False)
 
-    def _log_metrics(self, metrics: dict, postfix: str = '_batch'):
+    def _log_metrics(self, metrics: dict, postfix: str = "_batch"):
         for key, value in metrics.items():
             self.log(key + postfix, value)
 
-    def _log_epoch_metrics(self, stage, postfix: str = '_epoch'):
+    def _log_epoch_metrics(self, stage, postfix: str = "_epoch"):
         for metric_name, metric_fn in self._get_stage_metrics(stage).items():
             self.log(metric_name + postfix, metric_fn.compute(), on_step=False, on_epoch=True)
 
     def log_example_prediction(self):
         triplets = self.predict(self.example_texts)
         buf = io.StringIO()
-        pprint_triplets(self.example_texts, triplets, end='  \n', file=buf)
-        self.logger.experiment.add_text('predictions', buf.getvalue())
+        pprint_triplets(self.example_texts, triplets, end="  \n", file=buf)
+        self.logger.experiment.add_text("predictions", buf.getvalue())
 
     def training_step(self, batch, batch_idx):
-        _, loss, metrics = self.compute_loss(batch, stage='train')
+        _, loss, metrics = self.compute_loss(batch, stage="train")
         self.scheduler.step()
         self._log_metrics(metrics)
         return loss
 
     def on_train_epoch_end(self, *args):
-        self._log_epoch_metrics('train')
+        self._log_epoch_metrics("train")
 
     def validation_step(self, batch, batch_idx):
-        _, _, metrics = self.compute_loss(batch, stage='val')
+        _, _, metrics = self.compute_loss(batch, stage="val")
         self._log_metrics(metrics)
 
     def on_validation_epoch_end(self):
         self.log_example_prediction()
-        self._log_epoch_metrics('val')
+        self._log_epoch_metrics("val")
 
     def test_step(self, batch, batch_idx):
-        _, _, metrics = self.compute_loss(batch, stage='test')
+        _, _, metrics = self.compute_loss(batch, stage="test")
         self._log_metrics(metrics)
 
     def on_test_epoch_end(self):
         self.log_example_prediction()
-        self._log_epoch_metrics('test')
+        self._log_epoch_metrics("test")
 
     def configure_optimizers(self):
         return self.opt
@@ -374,4 +379,6 @@ class TripletsExtractor(pl.LightningModule):
 class TripletsExtractorBERTOnly(TripletsExtractor):
     def __init__(self, model_cfg: DictConfig, opt_cfg: DictConfig, scheduler_cfg: DictConfig):
         super().__init__(model_cfg, opt_cfg, scheduler_cfg)
-        self.logits = nn.Linear(self.pretrained_encoder.config.hidden_size, model_cfg.num_detections * model_cfg.n_classes)
+        self.logits = nn.Linear(
+            self.pretrained_encoder.config.hidden_size, model_cfg.num_detections * model_cfg.n_classes
+        )

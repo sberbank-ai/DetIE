@@ -38,14 +38,14 @@ def find_spans(text, patterns, steps=5):
             matched_span = spans[matched_span_idx]
             span_replacement = []
             for left, right in (
-                    (matched_span[0], largest_match.a),
-                    (largest_match.a + largest_match.size, matched_span[1])
+                (matched_span[0], largest_match.a),
+                (largest_match.a + largest_match.size, matched_span[1]),
             ):
                 if text[left:right].strip(STOP_TOKENS):
                     span_replacement.append([left, right])
-            spans[matched_span_idx:matched_span_idx + 1] = span_replacement
+            spans[matched_span_idx : matched_span_idx + 1] = span_replacement
 
-            pattern = pattern[:largest_match.b] + pattern[largest_match.b + largest_match.size:]
+            pattern = pattern[: largest_match.b] + pattern[largest_match.b + largest_match.size :]
             out[-1].append([largest_match.a, largest_match.a + largest_match.size])
 
     # # We omit missing "is" in rare cases
