@@ -1,6 +1,7 @@
 # coding: utf-8
 import logging
 
+import os
 import hydra
 import pandas as pd
 from omegaconf import DictConfig
@@ -94,9 +95,11 @@ def main(cfg):
     cfg.model.best_ckpt_path = "../../../../" + cfg.model.best_ckpt_path
     cfg.model.best_hparams_path = "../../../../" + cfg.model.best_hparams_path
 
+    current_dir = os.getcwd()
+
     for split in ["test"]:
-        test_set = f"data/carb_sentences.txt"
-        save_path = f"systems_output/detie{cfg.model.best_version}_output.txt"
+        test_set = f"{current_dir}/data/carb_sentences.txt"
+        save_path = f"{current_dir}/systems_output/detie{cfg.model.best_version}_output.txt"
 
         try:
             prepare_detie_ollie_format(test_set, save_path, cfg)
