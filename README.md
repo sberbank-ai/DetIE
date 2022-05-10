@@ -115,7 +115,7 @@ PYTHONPATH=. python3 modules/scripts/data/download_wikidata_triplets.py  wikidat
                 Dmitriy Salikhov, Mikhail Stepnov, Andrei Chertok and Sergey Nikolenko},
     title     = {{DetIE: Multilingual Open Information Extraction Inspired by Object Detection}},
     booktitle = {
-        {Proccedings of the 36th {AAAI} Conference on Artificial Intelligence}
+        {Proceedings of the 36th {AAAI} Conference on Artificial Intelligence}
     },
     year      = {2022}
   }
