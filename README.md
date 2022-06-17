@@ -1,7 +1,7 @@
 # DetIE: Multilingual Open Information Extraction Inspired by Object Detection
 
 This repository contains the code for the paper 
-'DetIE: Multilingual Open Information Extraction Inspired by Object Detection'
+[DetIE: Multilingual Open Information Extraction Inspired by Object Detection](https://www.aaai.org/AAAI22Papers/AAAI-8073.VasilkovskyM.pdf)
 by Michael Vasilkovsky, Anton Alekseev, Valentin Malykh, Ilya Shenbin, Elena Tutubalina, 
 Dmitriy Salikhov, Mikhail Stepnov, Andrei Chertok and Sergey Nikolenko.
 
