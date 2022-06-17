@@ -2,6 +2,7 @@ FROM pytorch/pytorch:1.4-cuda10.1-cudnn7-runtime
 
 WORKDIR ~/build
 
+RUN chmod 1777 /tmp
 RUN pip install --upgrade pip cmake
 RUN apt update --allow-unauthenticated && apt install -y build-essential
 
