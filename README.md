@@ -24,7 +24,7 @@ E. g. clone this repository, then
 ```bash
 cd DetIE/
 docker build -t detie .
-nvidia-docker run  -v ../DetIE:/project -p 8808:8808 -it detie:latest bash
+nvidia-docker run  -p 8808:8808 -it detie:latest bash
 ```
 
 Once this docker image starts, we're ready for work.
