@@ -5,7 +5,7 @@ import hydra
 from torch.utils.data import DataLoader
 from tqdm import tqdm
 
-from config.hydra import cleanup_hydra
+from config.hydra_ext import cleanup_hydra
 from modules.model import models
 from modules.model.apply import pprint_triplets
 

@@ -8,7 +8,7 @@ from pytorch_lightning import loggers
 from pytorch_lightning.callbacks import ModelCheckpoint
 from torch.utils.data import ConcatDataset, DataLoader, random_split
 
-from config.hydra import cleanup_hydra
+from config.hydra_ext import cleanup_hydra
 from modules.model import models
 from modules.model.dataloaders import CollateFn, WikiDataset
 
