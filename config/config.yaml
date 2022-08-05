@@ -37,6 +37,7 @@ scheduler:
   name: ExponentialLR
   gamma: 1
 
+# all data-related stuff, 'wiki' part is legacy
 wikidata:
   data_dir: ./data/wikidata
   seed: 42

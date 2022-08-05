@@ -1,7 +1,7 @@
 # DetIE: Multilingual Open Information Extraction Inspired by Object Detection
 
 This repository contains the code for the paper 
-'DetIE: Multilingual Open Information Extraction Inspired by Object Detection'
+[DetIE: Multilingual Open Information Extraction Inspired by Object Detection](https://www.aaai.org/AAAI22Papers/AAAI-8073.VasilkovskyM.pdf)
 by Michael Vasilkovsky, Anton Alekseev, Valentin Malykh, Ilya Shenbin, Elena Tutubalina, 
 Dmitriy Salikhov, Mikhail Stepnov, Andrei Chertok and Sergey Nikolenko.
 
@@ -24,7 +24,7 @@ E. g. clone this repository, then
 ```bash
 cd DetIE/
 docker build -t detie .
-nvidia-docker run  -v ../DetIE:/project -p 8808:8808 -it detie:latest bash
+nvidia-docker run  -p 8808:8808 -it detie:latest bash
 ```
 
 Once this docker image starts, we're ready for work.
@@ -115,7 +115,7 @@ PYTHONPATH=. python3 modules/scripts/data/download_wikidata_triplets.py  wikidat
                 Dmitriy Salikhov, Mikhail Stepnov, Andrei Chertok and Sergey Nikolenko},
     title     = {{DetIE: Multilingual Open Information Extraction Inspired by Object Detection}},
     booktitle = {
-        {Proccedings of the 36th {AAAI} Conference on Artificial Intelligence}
+        {Proceedings of the 36th {AAAI} Conference on Artificial Intelligence}
     },
     year      = {2022}
   }
