@@ -10,15 +10,12 @@ from modules.model import models
 from modules.model.apply import pprint_triplets
 
 TEST_TEXTS = [
-    "This is how Agent Archer received a medal from the US.",
     "Alexander Pushkin was shot at a duel in St. Petersburg.",
-    "The assault rifle is one of the very popular weapons in the Sahara desert.",
     "Bill Gates owns Microsoft Corporation.",
     "Lindon fictional universe where entity is from legendarium, The Boeing Company produces 747, "
     "population of Ukraine has census Ukrainian Census (2020), Bellecour is on Lyon Metro Line D, "
     "Vierwaldstättersee uses transport by boat, Wang Mang follows religion Confucianism.",
     "Фоллаут есть отличная постапокалиптическая игра",
-    "Roses are red. Violets are blue. Cleaning automatic rifles is the only thing I ever do.",
 ]
 
 

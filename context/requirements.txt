@@ -27,3 +27,4 @@ nltk==3.5
 qwikidata
 docopt
 ipdb
+markupsafe==2.0.1
