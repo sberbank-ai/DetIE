@@ -159,7 +159,32 @@ def spans2triples(labels, text, offsets_mapping_item, tokens):
 
         prev_label = label
 
-    return [strip_bs(text[sp[0] : sp[1]]) if sp is not None else "" for sp in result[1:]]
+    return [strip_bs(text[sp[0]: sp[1]]) if sp is not None else "" for sp in result[1:]]
+
+
+def spans2triples_join_by_token(labels, text, offsets_mapping_item, tokens):
+    """
+        Labels to text
+    :param labels: NSRT = 0,1,2,3
+    :param text: a single paragraph
+    :param offsets_mapping_item: spans yielded by tokenizer
+    """
+
+    # let us NOT believe the tokens of the same tag follow each other without breaks
+    result = [[], [], [], []]
+    prev_label = -1
+
+    for label, token, span in zip(labels, tokens, offsets_mapping_item):
+
+        if token.startswith("##"):
+            label = prev_label
+            result[label][-1] = result[label][-1] + token.strip("##")
+        else:
+            result[label].append(text[span[0]: span[1]])
+
+        prev_label = label
+
+    return [strip_bs(" ".join(sp)) if len(sp) > 0 else "" for sp in result[1:]]
 
 
 def prediction2triples(prediction, texts, offsets_mapping, tokenized):
@@ -177,7 +202,14 @@ def prediction2triples(prediction, texts, offsets_mapping, tokenized):
             # print(pred_labels)
             # print(texts[item_id], offsets_mapping[item_id], tokenized[item_id].tokens)
 
+            # in original DetIE paper
             triples = spans2triples(pred_labels, texts[item_id], offsets_mapping[item_id], tokenized[item_id].tokens)
+
+            # triples = spans2triples_join_by_token(pred_labels,
+            #                                        texts[item_id],
+            #                                        offsets_mapping[item_id],
+            #                                        tokenized[item_id].tokens)
+
             triplets[item_id].append([rel_id.item(), triples])
 
     return triplets
